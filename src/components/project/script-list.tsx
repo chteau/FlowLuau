@@ -2,6 +2,7 @@
 
 import { ScriptsModel as Scripts } from "@/generated/models";
 import { Button } from "@/components/ui/button";
+import { Pen, ScrollText, Trash } from "lucide-react";
 
 /**
  * Properties interface for the ScriptList component
@@ -82,9 +83,10 @@ export function ScriptList({
             <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-bold">Scripts</h2>
                 <Button
-                    size="sm"
+                    size="lg"
                     onClick={onCreateScript}
                     aria-label="Create new script"
+                    className="px-4 bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer"
                 >
                     New Script
                 </Button>
@@ -96,7 +98,7 @@ export function ScriptList({
                     <div
                         key={script.id}
                         className={`
-                            p-2 rounded cursor-pointer group
+                            pl-4 pr-2 py-2 rounded-md cursor-pointer group
                             ${selectedScript?.id === script.id
                                 ? 'bg-primary/10 text-primary-foreground'
                                 : 'hover:bg-muted/50'}
@@ -107,30 +109,33 @@ export function ScriptList({
                     >
                         <div className="flex justify-between items-center">
                             <span className="font-medium truncate max-w-[70%]">
+                                <ScrollText className="size-5 inline-block mr-4 opacity-50" />
                                 {script.name}
                             </span>
-                            <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="flex items-center space-x opacity-0 group-hover:opacity-100 transition-opacity">
                                 <Button
                                     variant="ghost"
-                                    size="sm"
+                                    size="lg"
+                                    className="cursor-pointer"
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         onRenameScript(script);
                                     }}
                                     aria-label={`Rename ${script.name}`}
                                 >
-                                    Rename
+                                    <Pen className="size-4" />
                                 </Button>
                                 <Button
                                     variant="ghost"
-                                    size="sm"
+                                    size="lg"
+                                    className="text-destructive hover:text-destructive/70 cursor-pointer"
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         onDeleteScript(script);
                                     }}
                                     aria-label={`Delete ${script.name}`}
                                 >
-                                    Delete
+                                    <Trash className="size-4" />
                                 </Button>
                             </div>
                         </div>

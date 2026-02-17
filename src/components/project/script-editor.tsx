@@ -2,9 +2,21 @@
 
 import { ScriptsModel as Scripts } from "@/generated/models";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-// @ts-ignore
-import ReactFlow, { MiniMap, Controls, Background, Node, Edge } from 'reactflow';
-import 'reactflow/dist/style.css';
+import {
+    ReactFlow,
+    MiniMap,
+    Controls,
+    Background,
+    useEdgesState,
+    useNodesState,
+    type Node,
+    type Edge,
+} from "@xyflow/react";
+import "@xyflow/react/dist/style.css";
+
+// Nodes
+import StartNode from "./nodes/Start";
+import { useEffect } from "react";
 
 /**
  * Properties interface for the ScriptEditor component
@@ -12,6 +24,10 @@ import 'reactflow/dist/style.css';
 export interface ScriptEditorProps {
     /** Currently selected script to edit, or null if none selected */
     selectedScript: Scripts | null;
+}
+
+const nodeTypes = {
+    Start: StartNode,
 }
 
 /**
@@ -65,10 +81,26 @@ export interface ScriptEditorProps {
  * </div>
  */
 export function ScriptEditor({ selectedScript }: ScriptEditorProps) {
+    const [nodes, setNodes, onNodesChange] = useNodesState([] as Node[]);
+    const [edges, setEdges, onEdgesChange] = useEdgesState([] as Edge[]);
+
+    useEffect(() => {
+        if (selectedScript) {
+            setNodes([
+                {
+                    id: "1",
+                    type: "Start",
+                    data: {},
+                    position: { x: 300, y: 50 },
+                }
+            ]);
+        }
+    }, [selectedScript]);
+
     return (
         <main className="flex-1 w-full overflow-y-auto z-10" aria-label="Script editor">
-            <Card className="h-full bg-transparent rounded-none border-0 shadow-none">
-                <CardHeader>
+            <Card className="h-full bg-transparent rounded-none border-0 shadow-none p-0 gap-0">
+                <CardHeader className="flex items-center justify-between border-b border-border bg-card/30 backdrop-blur px-6 py-4">
                     <CardTitle>
                         {selectedScript ? (
                             <span className="flex items-center gap-2">
@@ -79,19 +111,21 @@ export function ScriptEditor({ selectedScript }: ScriptEditorProps) {
                         )}
                     </CardTitle>
                 </CardHeader>
-                <CardContent className="h-[calc(100%-4rem)] relative">
+                <CardContent className="h-full relative p-0">
                     {selectedScript ? (
                         <ReactFlow
-                            defaultNodes={[]}
-                            defaultEdges={[]}
+                            nodes={nodes}
+                            edges={edges}
+                            nodeTypes={nodeTypes}
+                            onNodesChange={onNodesChange}
+                            onEdgesChange={onEdgesChange}
+                            colorMode="dark"
                             fitView
                             className="h-full w-full"
+                            style={{ background: "var(--transparent)" }}
                         >
-                            <MiniMap
-                                nodeColor="#555"
-                                nodeBorderRadius={3}
-                                maskColor="rgba(255,255,255,0.6)"
-                            />
+                            <MiniMap />
+                            <Background />
                             <Controls
                                 showFitView={true}
                                 showInteractive={false}

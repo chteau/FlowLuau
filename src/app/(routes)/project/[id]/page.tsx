@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { ProjectsModel as Projects, ScriptsModel as Scripts } from "@/generated/models";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { SidebarNav } from "@/components/dashboard/sidebar-nav";
@@ -77,8 +77,6 @@ export default function ProjectPage() {
         setDeleteDialogOpen(true);
     };
 
-
-    // API call handlers
     const handleCreateScript = async () => {
         if (!newScriptName.trim() || !projectId) return;
         try {
@@ -154,50 +152,56 @@ export default function ProjectPage() {
 
             {/* Create Script Dialog */}
             <Dialog open={isCreateDialogOpen} onOpenChange={setCreateDialogOpen}>
-                <DialogContent>
+                <DialogContent className="sm:max-w-130 p-5">
                     <DialogHeader>
-                        <DialogTitle>Create New Script</DialogTitle>
+                        <DialogTitle className="text-lg">Create New Script</DialogTitle>
+                        <DialogDescription className="text-sm text-muted-foreground">
+                            Let's give your new script a name. You can always change it later.
+                        </DialogDescription>
                     </DialogHeader>
                     <div className="py-4">
                         <Label htmlFor="new-script-name">Script Name</Label>
-                        <Input id="new-script-name" value={newScriptName} onChange={(e) => setNewScriptName(e.target.value)} />
+                        <Input id="new-script-name" className="mt-4 py-4 px-2" placeholder="MySuperScript" value={newScriptName} onChange={(e) => setNewScriptName(e.target.value)} />
                     </div>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>Cancel</Button>
-                        <Button onClick={handleCreateScript}>Create</Button>
+                        <Button variant="outline" size={"lg"} className="cursor-pointer" onClick={() => setCreateDialogOpen(false)}>Cancel</Button>
+                        <Button onClick={handleCreateScript} size={"lg"} className="cursor-pointer" >Create</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
 
             {/* Rename Script Dialog */}
             <Dialog open={isRenameDialogOpen} onOpenChange={setRenameDialogOpen}>
-                <DialogContent>
+                <DialogContent className="sm:max-w-130 p-5">
                     <DialogHeader>
-                        <DialogTitle>Rename Script</DialogTitle>
+                        <DialogTitle className="text-lg">Rename Script</DialogTitle>
+                        <DialogDescription className="text-sm text-muted-foreground">
+                            Enter a new name for the script "{scriptToRename?.name}".
+                        </DialogDescription>
                     </DialogHeader>
                     <div className="py-4">
                         <Label htmlFor="rename-script-name">New Script Name</Label>
-                        <Input id="rename-script-name" value={renamedScriptName} onChange={(e) => setRenamedScriptName(e.target.value)} />
+                        <Input id="rename-script-name" className="mt-4 py-4 px-2" placeholder="MySuperScript" value={renamedScriptName} onChange={(e) => setRenamedScriptName(e.target.value)} />
                     </div>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setRenameDialogOpen(false)}>Cancel</Button>
-                        <Button onClick={handleRenameScript}>Save</Button>
+                        <Button variant="outline" size={"lg"} className="cursor-pointer"  onClick={() => setRenameDialogOpen(false)}>Cancel</Button>
+                        <Button onClick={handleRenameScript} size={"lg"} className="cursor-pointer" >Save</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
 
             {/* Delete Script Confirmation Dialog */}
             <AlertDialog open={isDeleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-                <AlertDialogContent>
+                <AlertDialogContent className="sm:max-w-130 max-w-150 p-5">
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
+                        <AlertDialogTitle className="text-lg text-destructive">Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription className="text-sm text-muted-foreground">
                             This will permanently delete the script "{scriptToDelete?.name}". This action cannot be undone.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel onClick={() => setDeleteDialogOpen(false)}>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDeleteScript}>Delete</AlertDialogAction>
+                        <AlertDialogCancel size={"lg"} className="cursor-pointer"  onClick={() => setDeleteDialogOpen(false)}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction variant={"destructive"} size={"lg"} className="cursor-pointer" onClick={handleDeleteScript}>Delete</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
