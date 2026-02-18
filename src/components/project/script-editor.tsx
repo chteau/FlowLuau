@@ -17,11 +17,13 @@ import {
     type OnConnectStartParams,
     useReactFlow,
     ReactFlowProvider,
+    FinalConnectionState,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
 import { nodeTypes } from "./nodes/Manifest";
 import { LuauType } from "@/types/luau";
+import { cn } from "@/lib/utils";
 
 /**
  * Properties interface for the ScriptEditor component
@@ -121,34 +123,46 @@ function EditorCanvas({ selectedScript }: ScriptEditorProps) {
                     type: "Start",
                     data: {},
                     position: { x: 300, y: 50 },
+                    deletable: false,
+                    selectable: false,
                 },
             ]);
         }
     }, [selectedScript, setNodes]);
 
+    const resolveHandles = (component: any, node: FlowNode) => {
+        if (component.getHandles) {
+            return component.getHandles(node.data);
+        }
+
+        return component.meta.handles;
+    };
+
     /**
      * Handles connection validation and creation between nodes
      *
-     * Validates connections based on Luau type compatibility:
-     * - Checks if source and target handle types are compatible
-     * - Allows connections if either type is 'Any'
-     * - Only creates valid connections
-     *
-     * @param connection - Connection object containing source and target information
+     * Now supports dynamic handle validation via node's validateConnection method
      */
     const onConnect = useCallback((connection: Connection) => {
         const sourceNode = nodes.find(n => n.id === connection.source);
         const targetNode = nodes.find(n => n.id === connection.target);
         if (!sourceNode || !targetNode) return;
 
-        const sourceComponent = nodeTypes[sourceNode.type as keyof typeof nodeTypes] as any;
         const targetComponent = nodeTypes[targetNode.type as keyof typeof nodeTypes] as any;
+        const sourceComponent = nodeTypes[sourceNode.type as keyof typeof nodeTypes] as any;
 
-        const sourceHandleType = sourceComponent.meta.handles.outputs
-            .find((h: any) => h.id === connection.sourceHandle)?.type;
+        const sourceHandles = resolveHandles(sourceComponent, sourceNode);
+        const targetHandles = resolveHandles(targetComponent, targetNode);
 
-        const targetHandleType = targetComponent.meta.handles.inputs
-            .find((h: any) => h.id === connection.targetHandle)?.type;
+        const sourceHandleType = sourceHandles.outputs.find(
+            (h: any) => h.id === connection.sourceHandle
+        )?.type;
+
+        const targetHandleType = targetHandles.inputs.find(
+            (h: any) => h.id === connection.targetHandle
+        )?.type;
+
+        console.log(sourceHandleType, targetHandleType);
 
         if (
             sourceHandleType &&
@@ -183,7 +197,7 @@ function EditorCanvas({ selectedScript }: ScriptEditorProps) {
      *
      * @param event - Mouse or touch event ending the connection
      */
-    const onConnectEnd = useCallback((event: MouseEvent | TouchEvent) => {
+    const onConnectEnd = useCallback((event: MouseEvent | TouchEvent, connectionState: FinalConnectionState) => {
         if (!connectStartRef.current || !ref.current) return;
 
         const pane = ref.current.getBoundingClientRect();
@@ -197,7 +211,7 @@ function EditorCanvas({ selectedScript }: ScriptEditorProps) {
             clientY = event.clientY;
         }
 
-        if (nodeId) {
+        if (nodeId && !connectionState.isValid) {
             setEdgeContextMenu(null);
             setNodeContextMenu(null);
             setNodePickerMenu({
@@ -292,12 +306,7 @@ function EditorCanvas({ selectedScript }: ScriptEditorProps) {
     /**
      * Adds a new node and optionally connects it to an existing node
      *
-     * Handles:
-     * - Node creation at the specified position
-     * - Automatic connection based on Luau type compatibility
-     * - Finding compatible handles for connection
-     *
-     * @param nodeType - Type of node to create
+     * Now supports dynamic handle discovery via node's getHandles method
      */
     const addNodeAndConnect = (nodeType: string) => {
         if (!nodePickerMenu) return;
@@ -325,25 +334,38 @@ function EditorCanvas({ selectedScript }: ScriptEditorProps) {
         const sourceComponent = nodeTypes[sourceNode.type as keyof typeof nodeTypes] as any;
         const targetComponent = nodeTypes[nodeType as keyof typeof nodeTypes] as any;
 
-        const sourceHandleDef =
-            sourceHandleType === "source"
-                ? sourceComponent.meta.handles.outputs.find((h: any) => h.id === sourceHandleId)
-                : sourceComponent.meta.handles.inputs.find((h: any) => h.id === sourceHandleId);
 
-        if (!sourceHandleDef) return;
 
-        const targetHandleDef =
-            sourceHandleType === "source"
-                ? targetComponent.meta.handles.inputs.find((h: any) =>
-                    h.type === sourceHandleDef.type ||
-                    h.type === LuauType.Any ||
-                    sourceHandleDef.type === LuauType.Any
-                )
-                : targetComponent.meta.handles.outputs.find((h: any) =>
-                    h.type === sourceHandleDef.type ||
-                    h.type === LuauType.Any ||
-                    sourceHandleDef.type === LuauType.Any
-                );
+        // Get source handle type
+        let sourceHandle = resolveHandles(sourceComponent, sourceNode);
+        let sourceHandleTypeObj = sourceHandle.outputs.find((h: any) => h.id === sourceHandleId);
+        if (!sourceHandleTypeObj) {
+            sourceHandle = resolveHandles(targetComponent, newNode);
+            sourceHandleTypeObj = sourceHandle.inputs.find((h: any) => h.id === sourceHandleId);
+        }
+
+        if (!sourceHandleTypeObj) return;
+
+        // Get target handles (dynamic or static)
+        let targetHandles = resolveHandles(targetComponent, newNode);
+
+        // Find compatible handle
+        let targetHandleDef;
+        if (sourceHandleType === "source") {
+            // Looking for input handle on target
+            targetHandleDef = targetHandles.inputs.find((h: any) =>
+                h.type === sourceHandleTypeObj.type ||
+                h.type === LuauType.Any ||
+                sourceHandleTypeObj.type === LuauType.Any
+            );
+        } else {
+            // Looking for output handle on target
+            targetHandleDef = targetHandles.outputs.find((h: any) =>
+                h.type === sourceHandleTypeObj.type ||
+                h.type === LuauType.Any ||
+                sourceHandleTypeObj.type === LuauType.Any
+            );
+        }
 
         if (targetHandleDef) {
             const newEdge: FlowEdge = {
@@ -467,7 +489,7 @@ function EditorCanvas({ selectedScript }: ScriptEditorProps) {
                     <div className="absolute z-100 size-full top-0 left-0"></div>
                     <div
                         ref={menuRef}
-                        className="absolute bg-popover border rounded-md shadow-md z-101"
+                        className="absolute bg-popover border rounded-md shadow-md z-101 max-h-100 overflow-y-auto min-w-80"
                         style={{
                             top: (nodePickerMenu?.y ?? nodeContextMenu?.y ?? edgeContextMenu?.y) ?? 0,
                             left: (nodePickerMenu?.x ?? nodeContextMenu?.x ?? edgeContextMenu?.x) ?? 0,
@@ -505,12 +527,15 @@ function EditorCanvas({ selectedScript }: ScriptEditorProps) {
                                 .map(type => (
                                     <div
                                         key={type}
-                                        className="px-3 py-2 hover:bg-accent cursor-pointer"
+                                        className={cn(
+                                            "px-3 py-2 hover:bg-accent cursor-pointer",
+                                        )}
                                         onClick={() => addNodeAndConnect(type)}
                                     >
                                         {type}
                                     </div>
-                                ))}
+                                ))
+                        }
                     </div>
                 </>
             )}
