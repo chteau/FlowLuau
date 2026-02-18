@@ -18,7 +18,7 @@ export interface NilNodeData {
 /**
  * Props interface for NilNode component
  */
-export type NilNodeProps = NodeProps & NilNodeData;
+export type NilNodeProps = NodeProps & Partial<NilNodeData>;
 
 /**
  * NilNode component represents the nil value in Luau
@@ -57,47 +57,50 @@ const NilNode = memo(({
     dragging
 }: NilNodeProps) => {
     return (
-        <NodeTemplate details={{
-            icon: Slash,
-            name: "Nil",
-            description: "Represents the absence of a value.",
-            selected,
-        }}>
+        <NodeTemplate
+            details={{
+                color: {
+                    background: "bg-amber-400/10",
+                    border: "border-amber-400/30",
+                    text: "text-amber-400",
+                    ring: "ring-amber-400/40",
+                },
+                icon: Slash,
+                name: "Nil",
+                description: "Represents the absence of a value.",
+                selected,
+            }}
+            outputs={[
+                {
+                    id: "output",
+                    label: "Value",
+                    type: LuauType.Nil,
+                }
+            ]}
+        >
             <div className="flex justify-center py-2">
                 <span className="text-xs bg-muted px-2 py-0.5 rounded text-muted-foreground font-mono">
                     nil
                 </span>
             </div>
-            <Handle
-                type="source"
-                id="output"
-                position={Position.Right}
-                isConnectable={isConnectable}
-                style={{
-                    background: "none",
-                    border: "none",
-                    width: 15,
-                    height: 15,
-                }}
-            >
-                <div className={cn(
-                    "size-full rounded-full bg-primary/20 border-2 border-primary pointer-events-none",
-                    "transition-all duration-200",
-                    selected && "scale-110 ring-2 ring-primary/50",
-                    dragging && "opacity-80"
-                )} />
-            </Handle>
         </NodeTemplate>
     );
 });
 
 NilNode.displayName = 'NilNode';
 
-(NilNode as any).meta = {
-    handles: {
-        inputs: [],
-        outputs: [{ id: 'output', type: LuauType.Nil }],
-    },
-};
+/**
+ * Generates handle configuration for the NilNode
+ *
+ * @param data - Node data containing configuration
+ * @returns Object with inputs and outputs arrays for handle configuration
+ */
+(NilNode as any).getHandles = (
+    ...args: Parameters<typeof NilNode.prototype.getHandles>
+) => ({
+    outputs: [
+        { id: "output", label: "Value", type: LuauType.Nil }
+    ]
+});
 
 export default NilNode;

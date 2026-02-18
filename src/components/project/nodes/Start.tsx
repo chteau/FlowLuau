@@ -1,10 +1,9 @@
 "use client";
 
-import React, { memo } from 'react';
-import { Handle, Position, NodeProps } from '@xyflow/react';
+import { memo } from 'react';
+import { NodeProps } from '@xyflow/react';
 import NodeTemplate from './Template';
 import { Play } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { LuauType } from '@/types/luau';
 
 /**
@@ -42,31 +41,21 @@ const StartNode = memo(({
     dragging
 }: StartNodeProps) => {
     return (
-        <NodeTemplate details={{
-            icon: Play,
-            name: "Start",
-            description: "Starting point of your script.",
-            selected: selected,
-        }}>
-            <Handle
-                type="source"
-                id="output"
-                position={Position.Right}
-                isConnectable={isConnectable}
-                style={{
-                    background: "none",
-                    border: "none",
-                    width: 15,
-                    height: 15,
-                }}
-            >
-                <div className={cn(
-                    "size-full rounded-full bg-primary/20 border-2 border-primary pointer-events-none",
-                    "transition-all duration-200",
-                    selected && "scale-110 ring-2 ring-primary/50",
-                    dragging && "opacity-80"
-                )} />
-            </Handle>
+        <NodeTemplate
+            details={{
+                icon: Play,
+                name: "Start",
+                description: "Starting point of your script.",
+                selected: selected,
+            }}
+
+            outputs={[
+                {
+                    id: "output",
+                    type: LuauType.Any
+                }
+            ]}
+        >
         </NodeTemplate>
     );
 });
@@ -77,7 +66,7 @@ StartNode.displayName = 'StartNode';
 (StartNode as any).meta = {
     handles: {
         inputs: [],
-        outputs: [{ id: 'output', type: LuauType.Any }],
+        outputs: [{ id: 'output', type: LuauType.Flow }],
     },
 };
 
