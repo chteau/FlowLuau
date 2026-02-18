@@ -1,210 +1,268 @@
 "use client";
-import React, { memo, useState } from 'react';
-import { Handle, Position, NodeProps } from '@xyflow/react';
-import NodeTemplate from '../../Template';
-import { ToggleLeft, ToggleRight, Type, AlertTriangle } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { LuauType } from '@/types/luau';
-import { Input } from '@/components/ui/input';
+
+import React, { memo, useState } from "react";
+import { NodeProps } from "@xyflow/react";
+import NodeTemplate from "../../Template";
+import { ToggleRight } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { LuauType } from "@/types/luau";
+import { Input } from "@/components/ui/input";
+import VariableAutocomplete from "@/components/ui/variable-autocomplete";
 
 /**
- * Props interface for the BooleanNode component
+ * Props type for BooleanNode component
+ *
+ * Extends React Flow's NodeProps to support boolean value representation
+ * in visual scripting workflows with literal and expression modes.
+ *
+ * @typedef {NodeProps} BooleanNodeProps
  */
 export type BooleanNodeProps = NodeProps;
 
 /**
- * BooleanNode component represents a boolean value in Luau
+ * BooleanNode component represents boolean (true/false) values in Luau visual scripts
  *
- * This node provides two ways to define boolean values:
- * 1. Literal mode: Toggle between true and false values directly
- * 2. Expression mode: Enter a Luau expression that evaluates to a boolean
+ * Supports two operational modes for defining boolean values:
+ * 1. Literal mode: Direct toggle between true and false states via UI button
+ * 2. Expression mode: Custom Luau boolean expression evaluation (e.g., "x > 5 and y < 10")
  *
- * Key features:
- * - Toggle between literal and expression modes
- * - Visual toggle button for direct manipulation in literal mode
- * - Expression validation with visual feedback
- * - Clear representation of current boolean state
- * - Consistent styling with other node types
+ * Features:
+ * - Intuitive toggle interface for literal boolean values
+ * - Real-time expression validation with descriptive error feedback
+ * - Visual mode switching without data loss
+ * - Color-coded amber styling for boolean type identification
+ * - Single boolean output handle for downstream connections
+ * - Responsive visual feedback for valid/invalid expression states
  *
- * The node is designed for handling true/false conditions in script flows,
- * with intuitive visual representation of the current state and validation.
+ * Common use cases:
+ * - Conditional branching logic (if/else conditions)
+ * - Feature flags and toggle switches
+ * - State validation checks
+ * - Comparison operations between values
+ *
+ * Note: Expression validation uses a basic pattern matcher and does not perform
+ * full Luau semantic analysis. Complex expressions may pass validation but fail
+ * at runtime if syntactically invalid.
  *
  * @component
- * @param {BooleanNodeProps} props - Node properties provided by React Flow
+ * @param {BooleanNodeProps} props - React Flow node properties
  *
  * @example
- * // Register in node types
+ * // Register node type in React Flow
  * const nodeTypes = useMemo(() => ({
  *   boolean: BooleanNode
  * }), []);
  *
  * @example
- * // Create a literal boolean node
- * const booleanNode = {
- *   id: 'boolean-1',
+ * // Literal boolean node (true value)
+ * const trueNode = {
+ *   id: 'bool-1',
  *   type: 'boolean',
- *    {
- *     mode: 'literal',
- *     value: true
- *   },
+ *    { mode: 'literal', value: true },
  *   position: { x: 100, y: 200 }
  * };
  *
  * @example
- * // Create an expression boolean node
- * const expressionNode = {
- *   id: 'boolean-expr-1',
+ * // Expression boolean node (comparison)
+ * const comparisonNode = {
+ *   id: 'bool-2',
  *   type: 'boolean',
  *    {
  *     mode: 'expression',
- *     expression: 'x > 5 and y < 10'
+ *     expression: 'playerHealth > 0'
  *   },
  *   position: { x: 100, y: 200 }
  * };
  */
-const BooleanNode = memo(({
-    data,
-    isConnectable,
-    selected,
-    dragging
-}: BooleanNodeProps) => {
-    const [mode, setMode] = useState(data.mode || 'literal');
-    const [literalValue, setLiteralValue] = useState(data.value ?? true);
-    const [expression, setExpression] = useState<string>(String(data.expression ?? ''));
-    const [isValid, setIsValid] = useState(true);
-    const [error, setError] = useState('');
+const BooleanNode = memo(
+    ({ data, isConnectable, selected, dragging }: BooleanNodeProps) => {
+        const [mode, setMode] = useState(data.mode || "literal");
+        const [literalValue, setLiteralValue] = useState(data.value ?? true);
+        const [expression, setExpression] = useState<string>(
+            String(data.expression ?? "")
+        );
+        const [isValid, setIsValid] = useState(true);
+        const [error, setError] = useState("");
+        const scriptId = data?.__scriptId as string | undefined;
 
-    /**
-     * Handles changing between literal and expression modes
-     *
-     * @param newMode - The new mode to switch to ('literal' or 'expression')
-     */
-    const handleModeChange = (newMode: string) => {
-        setMode(newMode);
-    };
+        /**
+         * Handles mode switching between literal and expression operation types
+         *
+         * Updates local state to reflect the selected input method without
+         * persisting changes to React Flow's node data (persistence handled externally).
+         *
+         * @param {string} newMode - Target mode ("literal" or "expression")
+         * @returns {void}
+         */
+        const handleModeChange = (newMode: string) => {
+            setMode(newMode);
+        };
 
-    /**
-     * Toggles the boolean value in literal mode
-     */
-    const handleLiteralToggle = () => {
-        const newValue = !literalValue;
-        setLiteralValue(newValue);
-    };
+        /**
+         * Toggles the boolean value state in literal mode
+         *
+         * Inverts the current literal value (true ↔ false) with immediate
+         * visual feedback through the toggle button UI. Does not persist
+         * changes to React Flow's node data (persistence handled externally).
+         *
+         * @returns {void}
+         */
+        const handleLiteralToggle = () => {
+            const newValue = !literalValue;
+            setLiteralValue(newValue);
+        };
 
-    /**
-     * Handles changes to the expression input field
-     *
-     * Validates the expression against a basic pattern
-     *
-     * @param e - Change event from the input field
-     */
-    const handleExpressionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const expr = e.target.value;
-        setExpression(expr);
+        /**
+         * Handles expression input changes with real-time validation
+         *
+         * Validates expressions against a pattern for simple comparison operations.
+         * Provides immediate visual feedback and descriptive error messages for
+         * invalid syntax patterns.
+         *
+         * Validation rules:
+         * - Empty expressions are considered valid (placeholder state)
+         * - Must contain two operands separated by a comparison operator (==, ~=, >=, <=, >, <)
+         * - Operands can be identifiers ([a-zA-Z_]\w*) or numbers (\d+(\.\d+)?)
+         * - Does NOT validate complex boolean logic (e.g., "and", "or" chains)
+         *
+         * @param {React.ChangeEvent<HTMLInputElement>} e - Input change event
+         * @returns {void}
+         */
+        const handleExpressionChange = (
+            e: React.ChangeEvent<HTMLInputElement>
+        ) => {
+            const expr = e.target.value;
+            setExpression(expr);
 
-        const valid =
-            expr.trim() === "" ||
-            /^\s*(?:[a-zA-Z_]\w*|\d+(?:\.\d+)?)\s*(==|~=|>=|<=|>|<)\s*(?:[a-zA-Z_]\w*|\d+(?:\.\d+)?)\s*$/.test(expr);
+            const valid =
+                expr.trim() === "" ||
+                /^\s*(?:[a-zA-Z_]\w*|\d+(?:\.\d+)?)\s*(==|~=|>=|<=|>|<)\s*(?:[a-zA-Z_]\w*|\d+(?:\.\d+)?)\s*$/.test(
+                    expr
+                );
 
-        setIsValid(valid);
-        setError(valid ? "" : "Invalid boolean expression (expected: A <op> B)");
-    };
+            setIsValid(valid);
+            setError(
+                valid ? "" : "Invalid boolean expression (expected: A <op> B)"
+            );
+        };
 
-    return (
-        <NodeTemplate
-            details={{
-                color: {
-                    background: "bg-amber-400/10",
-                    border: "border-amber-400/30",
-                    text: "text-amber-400",
-                    ring: "ring-amber-400/40",
-                },
-                icon: ToggleRight,
-                name: "Boolean",
-                description: mode === 'literal' ?
-                    "Represents a true/false value." :
-                    "Evaluates a boolean expression.",
-                selected
-            }}
-            outputs={[
-                {
-                    id: "output",
-                    label: "Value",
-                    type: LuauType.Boolean
-                }
-            ]}
-        >
-            <div className="space-y-2 mb-4">
-                <div className="flex gap-1 mb-2">
-                    <Button
-                        variant={mode === 'literal' ? "default" : "outline"}
-                        size="xs"
-                        className="text-xs h-6 cursor-pointer bg-amber-300/10 hover:bg-amber-300/20"
-                        onClick={() => handleModeChange('literal')}
-                    >
-                        Literal
-                    </Button>
-                    <Button
-                        variant={mode === 'expression' ? "default" : "outline"}
-                        size="xs"
-                        className="text-xs h-6 cursor-pointer bg-amber-300/10 hover:bg-amber-300/20"
-                        onClick={() => handleModeChange('expression')}
-                    >
-                        Expression
-                    </Button>
-                </div>
-
-                {mode === 'literal' ? (
-                    <Button
-                        variant={literalValue ? "default" : "outline"}
-                        size="sm"
-                        className={cn(
-                            "w-full h-7 text-xs cursor-pointer",
-                            literalValue ? "bg-amber-400/40 hover:bg-amber-400/50" : "text-muted-foreground"
-                        )}
-                        onClick={handleLiteralToggle}
-                    >
-                        {literalValue ? "TRUE" : "FALSE"}
-                    </Button>
-                ) : (
-                    <div className="space-y-1">
-                        <Input
-                            type="text"
-                            value={expression}
-                            onChange={handleExpressionChange}
-                            placeholder='e.g., "x > 5 and y < 10"'
-                            className={cn(
-                                "text-xs h-7",
-                                !isValid && "border-destructive"
-                            )}
-                        />
-                        {!isValid && (
-                            <div className="text-[8px] text-destructive">
-                                {error}
-                            </div>
-                        )}
+        return (
+            <NodeTemplate
+                details={{
+                    color: {
+                        background: "bg-amber-400/10",
+                        border: "border-amber-400/30",
+                        text: "text-amber-400",
+                        ring: "ring-amber-400/40",
+                    },
+                    icon: ToggleRight,
+                    name: "Boolean",
+                    description:
+                        mode === "literal"
+                            ? "Represents a true/false value."
+                            : "Evaluates a boolean expression.",
+                    selected,
+                }}
+                outputs={[
+                    {
+                        id: "output",
+                        label: "Value",
+                        type: LuauType.Boolean,
+                    },
+                ]}
+            >
+                <div className="space-y-2 mb-4">
+                    <div className="flex gap-1 mb-2">
+                        <Button
+                            variant={mode === "literal" ? "default" : "outline"}
+                            size="xs"
+                            className="text-xs h-6 cursor-pointer bg-amber-300/10 hover:bg-amber-300/20"
+                            onClick={() => handleModeChange("literal")}
+                        >
+                            Literal
+                        </Button>
+                        <Button
+                            variant={
+                                mode === "expression" ? "default" : "outline"
+                            }
+                            size="xs"
+                            className="text-xs h-6 cursor-pointer bg-amber-300/10 hover:bg-amber-300/20"
+                            onClick={() => handleModeChange("expression")}
+                        >
+                            Expression
+                        </Button>
                     </div>
-                )}
-            </div>
-        </NodeTemplate>
-    );
-});
 
-BooleanNode.displayName = 'BooleanNode';
+                    {mode === "literal" ? (
+                        <Button
+                            variant={literalValue ? "default" : "outline"}
+                            size="sm"
+                            className={cn(
+                                "w-full h-7 text-xs cursor-pointer",
+                                literalValue
+                                    ? "bg-amber-400/40 hover:bg-amber-400/50"
+                                    : "text-muted-foreground"
+                            )}
+                            onClick={handleLiteralToggle}
+                        >
+                            {literalValue ? "TRUE" : "FALSE"}
+                        </Button>
+                    ) : (
+                        <div className="space-y-1">
+                            <VariableAutocomplete
+                                scriptId={scriptId || "unknown"}
+                                type="text"
+                                value={expression}
+                                onChange={handleExpressionChange}
+                                placeholder='e.g., "x > 5 and y < 10"'
+                                className={cn(
+                                    "text-xs h-7",
+                                    !isValid && "border-destructive"
+                                )}
+                            />
+                            {!isValid && (
+                                <div className="text-[8px] text-destructive">
+                                    {error}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            </NodeTemplate>
+        );
+    }
+);
+
+BooleanNode.displayName = "BooleanNode";
 
 /**
- * Generates handle configuration for the BooleanNode
+ * Static method to compute output handles for BooleanNode
  *
- * @param data - Node data containing configuration
- * @returns Object with inputs and outputs arrays for handle configuration
+ * Provides handle configuration for the visual scripting system to render
+ * connection points without mounting the full component. Boolean nodes
+ * expose a single boolean-typed output handle regardless of operation mode.
+ *
+ * Note: This implementation returns static handle configuration and does not
+ * access node data parameters. External systems should use this for handle
+ * layout calculations during graph rendering operations.
+ *
+ * @static
+ * @returns {Object} Handle configuration object
+ * @returns {Array} returns.outputs - Single boolean output handle
+ *
+ * @example
+ * const handles = BooleanNode.getHandles();
+ * // {
+ * //   outputs: [
+ * //     { id: "output", label: "Value", type: LuauType.Boolean }
+ * //   ]
+ * // }
  */
 (BooleanNode as any).getHandles = (
     ...args: Parameters<typeof BooleanNode.prototype.getHandles>
 ) => ({
-    outputs: [
-        { id: "output", label: "Value", type: LuauType.Boolean }
-    ]
+    outputs: [{ id: "output", label: "Value", type: LuauType.Boolean }],
 });
 
 export default BooleanNode;
