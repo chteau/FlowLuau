@@ -3,6 +3,50 @@ import { prisma } from "@/lib/db";
 import { NextResponse } from "next/server";
 
 /**
+ *
+ */
+export async function GET(
+    req: Request,
+    context: { params: Promise<{ id: string }> }
+) {
+    try {
+        const session = await getServerSession();
+        if (!session) {
+            return unauthorizedResponse();
+        }
+
+        const { id } = await context.params;
+
+        const script = await authorizeScriptAccess(session.user.id, id);
+        if (!script) {
+            return notFoundResponse("Script");
+        }
+
+        const updatedScript = await prisma.scripts.findUnique({
+            where: { id },
+            include: {
+                graphs: true,
+            },
+        });
+
+        return NextResponse.json(updatedScript);
+    } catch (error) {
+        if (error instanceof ScriptNameValidationError) {
+            return NextResponse.json(
+                { error: error.message },
+                { status: 400 }
+            );
+        }
+
+        if (isPrismaNotFoundError(error)) {
+            return notFoundResponse("Script");
+        }
+
+        return handleDatabaseError(error, "updating script");
+    }
+}
+
+/**
  * PUT handler to update a script's name.
  *
  * @param req - Incoming request with JSON body containing the new name
