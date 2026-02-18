@@ -2,6 +2,7 @@
 
 import { ReactNode } from "react";
 import { SquareFunction } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 /**
  * Interface defining the structure of node details
@@ -35,6 +36,11 @@ export interface NodeTemplateProps {
          * @default SquareFunction (if not provided)
          */
         icon?: React.ComponentType<{ className?: string }>;
+
+        /**
+         *
+         */
+        selected?: boolean;
     };
 }
 
@@ -96,7 +102,10 @@ export default function NodeTemplate({
     const Icon = details.icon || SquareFunction;
 
     return (
-        <div className="border border-border bg-card/10 backdrop-blur-sm rounded-md shadow-md min-w-60 transition-all duration-200 hover:shadow-lg hover:border-primary/50">
+        <div className={cn(
+            "border border-border bg-card/10 backdrop-blur-sm rounded-md shadow-md min-w-70 transition-all duration-200 hover:shadow-lg hover:border-primary/50",
+            details.selected ? "border-primary" : "",
+        )}>
             <div className="bg-card/50 p-3 flex items-center gap-2 border-b border-border rounded-t-xl">
                 <div className="flex size-6 items-center justify-center rounded bg-primary/10 text-primary">
                     <Icon className="size-4" aria-hidden="true" />
@@ -105,7 +114,7 @@ export default function NodeTemplate({
                     {details.name}
                 </h3>
             </div>
-            <div className="flex flex-col gap-3 p-3">
+            <div className="flex flex-col gap-3 p-5">
                 <p className="text-xs text-muted-foreground leading-tight line-clamp-2">
                     {details.description}
                 </p>

@@ -5,6 +5,7 @@ import { Handle, Position, NodeProps } from '@xyflow/react';
 import NodeTemplate from './Template';
 import { Play } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { LuauType } from '@/types/luau';
 
 /**
  * Interface defining the data structure for the StartNode
@@ -45,6 +46,7 @@ const StartNode = memo(({
             icon: Play,
             name: "Start",
             description: "Starting point of your script.",
+            selected: selected,
         }}>
             <Handle
                 type="source"
@@ -71,5 +73,12 @@ const StartNode = memo(({
 
 // Set display name for debugging purposes
 StartNode.displayName = 'StartNode';
+
+(StartNode as any).meta = {
+    handles: {
+        inputs: [],
+        outputs: [{ id: 'output', type: LuauType.Any }],
+    },
+};
 
 export default StartNode;
