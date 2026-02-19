@@ -13,6 +13,10 @@ export const auth = betterAuth({
         roblox: {
             clientId: process.env["ROBLOX_CLIENT_ID"] as string,
             clientSecret: process.env["ROBLOX_CLIENT_SECRET"] as string,
+            scope: [
+                "group:read",
+                "legacy-universe:manage",
+            ]
         }
     }
 });

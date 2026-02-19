@@ -249,7 +249,7 @@ export function ProjectItem({ project }: { project: Project }) {
         <Card className={cn(
             "flex flex-col justify-between rounded-md border border-border",
             "bg-card/50 backdrop-blur group-hover:bg-accent/50 transition-colors",
-            "min-w-md hover:border-foreground/20 group",
+            "hover:border-foreground/20 group",
             "z-10 p-0"
         )}>
             <Link

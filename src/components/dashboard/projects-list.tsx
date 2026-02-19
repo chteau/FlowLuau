@@ -181,7 +181,7 @@ export function ProjectsList() {
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
                 {/* Projects Grid */}
                 {projects.length > 0 && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    <div className="grid gap-4 w-full grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                         {projects.map((project) => (
                             <ProjectItem key={project.id} project={project} />
                         ))}

@@ -1,9 +1,20 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { LayoutDashboard } from "lucide-react";
+import { LayoutDashboard, LogOut, Settings, ChevronsUpDown } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { authClient } from "@/lib/auth/client";
+import { usePathname } from "next/navigation";
+import Link from "next/link";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { buttonVariants } from "../ui/button";
 
 /**
  * Navigation item interface for sidebar menu items
@@ -11,7 +22,7 @@ import { authClient } from "@/lib/auth/client";
 interface NavItem {
     label: string;
     icon: React.ComponentType<{ className?: string; size?: number }>;
-    active?: boolean;
+    href: string;
 }
 
 /**
@@ -26,7 +37,7 @@ const NAV_SECTIONS: NavSection[] = [
     {
         title: "Dashboard",
         items: [
-            { label: "Projects", icon: LayoutDashboard, active: true },
+            { label: "Projects", icon: LayoutDashboard, href: "/" },
         ],
     },
 ];
@@ -40,21 +51,10 @@ const NAV_SECTIONS: NavSection[] = [
  * - User profile information at the bottom
  *
  * @component
- * @param {SidebarNavProps} props - Component properties
- * @param {Object} props.me - Session data containing user information
- * @param {boolean} [props.me.isLoading] - Whether session data is still loading
- * @param {Error|null} [props.me.error] - Error that occurred while fetching session data
- * @param {Object|null} [props.me.data] - The actual session data
- * @param {Object} [props.me.data.user] - User information
- * @param {string} props.me.data.user.name - User's display name
- * @param {string} props.me.data.user.email - User's email address
- * @param {string} [props.me.data.user.image] - URL to user's profile image
- *
- * @example
- * <SidebarNav me={session} />
  */
 export function SidebarNav() {
     const me = authClient.useSession();
+    const pathname = usePathname();
 
     /**
      * Gets a fallback avatar text based on user's name
@@ -71,7 +71,7 @@ export function SidebarNav() {
 
         return (
             nameParts[0]![0]! +
-            nameParts[nameParts.length - 1]![0]
+            nameParts[nameParts.length - 1]![0]!
         ).toUpperCase();
     };
 
@@ -121,30 +121,59 @@ export function SidebarNav() {
     return (
         <aside className="flex h-screen w-64 flex-col border-r border-border bg-background z-10">
             {/* User section */}
-            <div className="border-sidebar-border" aria-label="User profile">
-                <button
-                    className="flex w-full cursor-pointer items-center gap-3 p-5 py-5.5 text-sm text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
-                >
-                    <Avatar className="size-10">
-                        {me.data.user.image ? (
-                            <AvatarImage
-                                src={me.data.user.image}
-                                alt={`${me.data.user.name}'s profile`}
-                            />
-                        ) : null}
-                        <AvatarFallback className="bg-primary/20 text-primary text-xs font-semibold">
-                            {getUserInitials()}
-                        </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 text-left overflow-hidden">
-                        <p className="text-sm font-medium leading-none truncate">
-                            {me.data.user.name}
-                        </p>
-                        <p className="mt-0.5 text-xs text-muted-foreground truncate">
-                            {me.data.user.email}
-                        </p>
-                    </div>
-                </button>
+            <div className="border-b border-sidebar-border" aria-label="User profile">
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild className="outline-none">
+                        <button
+                            className="flex w-full cursor-pointer items-center gap-3 p-5 py-5.5 text-sm text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
+                        >
+                            <Avatar className="size-10">
+                                {me.data.user.image ? (
+                                    <AvatarImage
+                                        src={me.data.user.image}
+                                        alt={`${me.data.user.name}'s profile`}
+                                    />
+                                ) : null}
+                                <AvatarFallback className="bg-primary/20 text-primary text-xs font-semibold">
+                                    {getUserInitials()}
+                                </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 text-left overflow-hidden">
+                                <p className="text-sm font-medium leading-none truncate">
+                                    {me.data.user.name}
+                                </p>
+                                <p className="mt-0.5 text-xs text-muted-foreground truncate">
+                                    {me.data.user.email}
+                                </p>
+                            </div>
+                            <ChevronsUpDown className="size-4 text-muted-foreground" />
+                        </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-56 absolute left-3" align="end">
+                        <DropdownMenuLabel className="font-normal">
+                            <div className="flex flex-col space-y-1 p-2">
+                                <p className="text-sm font-medium leading-none">
+                                    {me.data.user.name}
+                                </p>
+                                <p className="text-xs leading-none text-muted-foreground">
+                                    {me.data.user.email}
+                                </p>
+                            </div>
+                        </DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem asChild className="cursor-pointer">
+                            <Link href="/settings">
+                                <Settings className="mr-2 h-4 w-4" />
+                                <span>Settings</span>
+                            </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => authClient.signOut()}  className="cursor-pointer">
+                            <LogOut className="mr-2 h-4 w-4" />
+                            <span>Log out</span>
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
             </div>
 
             {/* Navigation */}
@@ -167,27 +196,30 @@ export function SidebarNav() {
                             role="group"
                             aria-labelledby={section.title ? `section-${sectionIndex}-title` : undefined}
                         >
-                            {section.items.map((item) => (
-                                <button
-                                    key={item.label}
-                                    className={cn(
-                                        "flex items-center gap-3 rounded-md px-2 py-1.5 text-sm transition-colors",
-                                        "cursor-pointer hover:bg-sidebar-accent",
-                                        item.active
-                                            ? "bg-sidebar-accent text-sidebar-foreground font-medium"
-                                            : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
-                                    )}
-                                    aria-current={item.active ? "page" : undefined}
-                                >
-                                    <item.icon className="size-4" aria-hidden="true" />
-                                    <span>{item.label}</span>
-                                </button>
-                            ))}
+                            {section.items.map((item) => {
+                                const isActive = pathname === item.href;
+                                return (
+                                    <Link
+                                        key={item.label}
+                                        href={item.href}
+                                        className={cn(
+                                            buttonVariants({ variant: 'ghost', size: 'sm' }),
+                                            "flex items-center gap-3 py-5 px-3 text-sm justify-start",
+                                            isActive
+                                                ? "bg-sidebar-accent text-sidebar-foreground font-medium"
+                                                : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                                        )}
+                                        aria-current={isActive ? "page" : undefined}
+                                    >
+                                        <item.icon className="size-4" aria-hidden="true" />
+                                        <span>{item.label}</span>
+                                    </Link>
+                                );
+                            })}
                         </div>
                     </div>
                 ))}
             </nav>
-
         </aside>
     );
 }
