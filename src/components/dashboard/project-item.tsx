@@ -17,65 +17,89 @@ import {
     ExternalLink,
     Settings,
     Trash2,
-    Clock,
+    Calendar,
+    Network,
 } from "lucide-react";
+import { Card, CardFooter, CardHeader, CardTitle } from "../ui/card";
+import Link from "next/link";
 
 /**
- * Project interface representing a user project
+ * Represents a user project entity in the visual scripting application
  *
- * Note: In practice, API responses will have string dates that need conversion
+ * Projects serve as top-level containers for scripts, variables, and other resources.
+ * Each project maintains metadata about its creation, modification history, and ownership.
+ * Date fields may be provided as ISO 8601 strings from API responses or Date objects
+ * in client-side state, requiring robust handling in display logic.
+ *
+ * @interface Project
+ * @property {string} id - Globally unique identifier (UUID) for project persistence and routing
+ * @property {string} name - User-defined display name for the project (e.g., "Player Controller")
+ * @property {string | Date} createdAt - Timestamp of project creation (ISO string from API or Date object)
+ * @property {string | Date} updatedAt - Timestamp of last modification (ISO string from API or Date object)
+ * @property {string} userId - Identifier of the authenticated user who owns this project
  */
 export interface Project {
-    /** Project's unique identifier */
     id: string;
-    /** Project's display name */
     name: string;
-    /** Timestamp when the project was created (ISO string in practice) */
     createdAt: string | Date;
-    /** Timestamp when the project was last updated (ISO string in practice) */
     updatedAt: string | Date;
-    /** ID of the user who owns this project */
     userId: string;
 }
 
 /**
- * Converts a date input (string or Date object) to a human-readable relative time string
+ * Converts date inputs into human-readable relative time descriptions
  *
- * This function handles both ISO date strings and Date objects, making it robust
- * against the common issue where API responses provide date strings that TypeScript
- * thinks are Date objects due to interface definitions.
+ * Transforms both ISO 8601 date strings and Date objects into natural language
+ * relative timestamps (e.g., "2 minutes ago", "3 days ago"). Implements robust
+ * handling for edge cases including invalid inputs, future dates, and micro-interactions.
  *
- * @param dateInput - Date string or Date object to format
- * @returns A human-readable relative time string (e.g., "2 minutes ago", "4 months ago")
+ * Algorithm behavior:
+ * - Normalizes input to Date object regardless of source format
+ * - Calculates millisecond difference from current time
+ * - Selects optimal time unit based on magnitude thresholds
+ * - Applies correct pluralization rules for time units
+ * - Special-cases micro-interactions (<5 seconds → "just now")
+ *
+ * Edge case handling:
+ * - Invalid dates: Returns "invalid date" with console warning
+ * - Future dates: Returns "in the future" (prevents negative time displays)
+ * - Extreme past: Falls back to "a long time ago" for dates beyond defined intervals
+ * - Null/undefined inputs: Caller responsibility (not handled internally)
+ *
+ * Performance characteristics:
+ * - O(1) constant time complexity (fixed interval checks)
+ * - Minimal memory allocation (single Date object creation)
+ * - No external dependencies or side effects
+ *
+ * @param {string | Date} dateInput - Source date value (ISO string or Date instance)
+ * @returns {string} Localized relative time description for UI display
  *
  * @example
- * formatRelativeTime("2026-02-17T06:03:33.761Z"); // "just now"
- * formatRelativeTime(new Date()); // "just now"
- * formatRelativeTime(project.updatedAt); // Works whether it's string or Date
+ * formatRelativeTime("2026-02-19T14:30:00Z"); // "just now" (if within 5 seconds of current time)
+ * formatRelativeTime(new Date(Date.now() - 7200000)); // "2 hours ago"
+ * formatRelativeTime("invalid-date-string"); // "invalid date"
+ * formatRelativeTime(new Date(Date.now() + 3600000)); // "in the future"
  */
 export function formatRelativeTime(dateInput: string | Date): string {
-    // Convert to ISO string if it's a Date object
     const isoString = dateInput instanceof Date ? dateInput.toISOString() : dateInput;
-
-    // Parse the input date
     const date = new Date(isoString);
 
-    // Handle invalid dates
     if (isNaN(date.getTime())) {
         console.error(`Invalid date format: ${isoString}`);
         return "invalid date";
     }
 
-    // Get current time
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
 
-    // Handle future dates
     if (diffMs < 0) {
         return "in the future";
     }
 
-    // Define time intervals in milliseconds
+    if (diffMs < 5000) {
+        return "just now";
+    }
+
     const intervals = [
         { unit: "year", ms: 365.25 * 24 * 60 * 60 * 1000, max: Infinity },
         { unit: "month", ms: 30.44 * 24 * 60 * 60 * 1000, max: 12 },
@@ -86,53 +110,73 @@ export function formatRelativeTime(dateInput: string | Date): string {
         { unit: "second", ms: 1000, max: 60 }
     ];
 
-    // Special case for "just now" (less than 5 seconds)
-    if (diffMs < 5000) {
-        return "just now";
-    }
-
-    // Find the appropriate time unit
     for (const interval of intervals) {
         const count = Math.floor(diffMs / interval.ms);
-
-        // Check if this unit is applicable
         if (count >= 1 && count <= interval.max) {
-            // Handle pluralization
             const unit = count === 1 ? interval.unit : `${interval.unit}s`;
             return `${count} ${unit} ago`;
         }
     }
 
-    // Fallback for very old dates (shouldn't happen with our intervals)
     return "a long time ago";
 }
 
 /**
- * ProjectItem component displays a single project in a card format
+ * ProjectItem component renders a single project as an interactive card in the dashboard
  *
- * This component provides:
- * - Visual representation of a project with name and icon
- * - Dropdown menu with project actions
- * - Relative time display for last update
- * - Responsive design for different screen sizes
+ * Provides a visual entry point to project management with intuitive navigation and
+ * contextual actions. Features a letter-based avatar derived from project name, relative
+ * time display for last modification, and node count metrics. Entire card surface is
+ * clickable for primary navigation while preserving access to secondary actions via dropdown.
  *
- * The component automatically:
- * - Generates a letter-based icon from the project name
- * - Formats the update time as "X time ago"
- * - Shows dropdown menu on hover
- * - Handles navigation to project details and settings
+ * Visual design characteristics:
+ * - Letter avatar using first character of project name with contextual background
+ * - Subtle hover transitions on border and background for tactile feedback
+ * - Absolute-positioned overlay link for full-card click navigation
+ * - Dropdown menu with contextual actions (open, settings, delete)
+ * - Compact footer displaying last modified time and node count metrics
+ * - Responsive layout adapting to container constraints
+ *
+ * Interaction patterns:
+ * - Primary action: Click anywhere on card navigates to project editor (/project/{id})
+ * - Secondary actions: Dropdown menu provides access to settings and deletion
+ * - Delete workflow: Confirmation dialog prevents accidental data loss
+ * - Visual feedback: Hover states enhance discoverability of interactive elements
+ *
+ * Data integration:
+ * - Accepts Project interface with robust date handling (string/Date)
+ * - Displays relative time using formatRelativeTime utility
+ * - Node count currently hardcoded to 0 (pending graph analysis implementation)
+ * - Relies on parent component for project list state management
+ *
+ * Security considerations:
+ * - Delete operation requires explicit confirmation dialog
+ * - Navigation restricted to authenticated user's own projects (enforced server-side)
+ * - No sensitive data exposed in client-side rendering
  *
  * @component
  * @param {Object} props - Component properties
- * @param {Project} props.project - Project data to display
+ * @param {Project} props.project - Project data object containing metadata and identifiers
  *
  * @example
- * // Basic usage in a projects grid
+ * // Basic usage within project grid layout
  * <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
- *   {projects.map(project => (
+ *   {userProjects.map(project => (
  *     <ProjectItem key={project.id} project={project} />
  *   ))}
  * </div>
+ *
+ * @example
+ * // Integration with project management context
+ * <ProjectItem
+ *   project={{
+ *     id: "proj_a1b2c3",
+ *     name: "Character Controller",
+ *     createdAt: "2026-02-15T08:22:17Z",
+ *     updatedAt: new Date(),
+ *     userId: "user_xyz789"
+ *   }}
+ * />
  */
 export function ProjectItem({ project }: { project: Project }) {
     const router = useRouter();
@@ -140,27 +184,46 @@ export function ProjectItem({ project }: { project: Project }) {
     const [error, setError] = useState<string | null>(null);
 
     /**
-     * Handles opening the project
+     * Navigates to the project editor interface for script authoring
      *
-     * Navigates to the project detail page
+     * Transitions to the visual scripting canvas using Next.js App Router navigation.
+     * Preserves client-side routing benefits (no full page reload, maintains state).
+     * Triggered by clicking the main card surface or "Open" menu item.
+     *
+     * @returns {void}
+     * @sideEffect Updates browser URL and renders ProjectPage component
      */
     const handleOpenProject = () => {
         router.push(`/project/${project.id}`);
     };
 
     /**
-     * Handles opening project settings
+     * Navigates to project configuration settings interface
      *
-     * Navigates to the project settings page
+     * Opens project-specific settings page for metadata management, permissions,
+     * and advanced configuration options. Accessed exclusively through dropdown menu.
+     *
+     * @returns {void}
+     * @sideEffect Updates browser URL and renders ProjectSettingsPage component
      */
     const handleOpenSettings = () => {
         router.push(`/project/${project.id}/settings`);
     };
 
     /**
-     * Handles project deletion
+     * Initiates project deletion workflow with server persistence
      *
-     * Shows confirmation dialog before deletion
+     * Executes DELETE request to project API endpoint after user confirmation.
+     * On success, triggers full page reload to reflect updated project list.
+     * On failure, displays error state and closes confirmation dialog.
+     *
+     * Security note: Server enforces ownership validation - clients cannot delete
+     * projects they don't own regardless of frontend actions.
+     *
+     * @async
+     * @returns {Promise<void>}
+     * @sideEffect Sends DELETE request to /api/projects/{id}; reloads page on success
+     * @throws {Error} Network errors or non-2xx API responses
      */
     const handleDeleteProject = async () => {
         if (!project.id) return;
@@ -175,7 +238,7 @@ export function ProjectItem({ project }: { project: Project }) {
                 throw new Error(errorData.error || 'Failed to delete project');
             }
 
-            window.location.reload(); // Refresh the page to reflect deletion
+            window.location.reload();
         } catch (err) {
             setError(err instanceof Error ? err.message : 'An unknown error occurred');
             setProjectDeleteDialogOpen(false);
@@ -183,69 +246,81 @@ export function ProjectItem({ project }: { project: Project }) {
     };
 
     return (
-        <div className={cn(
+        <Card className={cn(
             "flex flex-col justify-between rounded-md border border-border",
             "bg-card/50 backdrop-blur group-hover:bg-accent/50 transition-colors",
             "min-w-md hover:border-foreground/20 group",
-            "z-10"
+            "z-10 p-0"
         )}>
-            <div className="flex items-center gap-4 p-4">
-                <div className="flex size-10 items-center justify-center rounded-md bg-primary/20 border-primary/50 border text-sm font-bold text-foreground">
-                    {project.name.charAt(0).toUpperCase()}
+            <Link
+                href={`/project/${project.id}`}
+                className="absolute top-0 left-0 size-full z-10 cursor-pointer"
+            />
+            <div className="size-full min-h-30 bg-muted/30 p-4 relative overflow-hidden flex">
+                <div className={`w-12 h-12 bg-secondary text-secondary-foreground rounded-lg flex items-center justify-center font-bold text-lg relative z-10 shadow-sm`}>
+                    {project.name.charAt(0)}
                 </div>
 
-                <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-3">
-                        <h3 className="text-sm font-semibold text-foreground truncate">{project.name}</h3>
-                    </div>
-                </div>
+                <div className="absolute top-2 right-2 z-15 group-hover:opacity-100 transition-opacity">
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                className="text-muted-foreground transition-opacity hover:text-foreground p-4 cursor-pointer"
+                            >
+                                <MoreHorizontal className="size-4" />
+                                <span className="sr-only">Project options</span>
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuItem
+                                className="cursor-pointer"
+                                onClick={handleOpenProject}
+                            >
+                                <ExternalLink className="size-4" />
+                                Open
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                                className="cursor-pointer"
+                                onClick={handleOpenSettings}
+                            >
+                                <Settings className="size-4" />
+                                Project settings
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
 
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            className="text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:text-foreground p-4 cursor-pointer"
-                        >
-                            <MoreHorizontal className="size-4" />
-                            <span className="sr-only">Project options</span>
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48">
-                        <DropdownMenuItem
-                            className="cursor-pointer"
-                            onClick={handleOpenProject}
-                        >
-                            <ExternalLink className="size-4" />
-                            Open
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                            className="cursor-pointer"
-                            onClick={handleOpenSettings}
-                        >
-                            <Settings className="size-4" />
-                            Project settings
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-
-                        <DropdownMenuItem
-                            variant="destructive"
-                            className="cursor-pointer"
-                            onClick={() => setProjectDeleteDialogOpen(true)}
-                        >
-                            <Trash2 className="size-4" />
-                            Delete project
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            </div>
-
-            <div className="hidden items-center justify-end gap-6 text-xs text-muted-foreground lg:flex border-t border-border px-4 py-4">
-                <div className="flex items-center gap-1.5">
-                    <span>{formatRelativeTime(project.updatedAt)}</span>
-                    <Clock className="size-3" />
+                            <DropdownMenuItem
+                                variant="destructive"
+                                className="cursor-pointer"
+                                onClick={() => setProjectDeleteDialogOpen(true)}
+                            >
+                                <Trash2 className="size-4" />
+                                Delete project
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
             </div>
+
+            <CardHeader className="space-y-2">
+                <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg font-semibold truncate max-w-full">
+                        {project.name}
+                    </CardTitle>
+                </div>
+            </CardHeader>
+
+            <CardFooter className="p-4 pt-0 flex items-center gap-4 text-[11px] text-muted-foreground">
+                <div className="flex items-center gap-1">
+                    <Calendar className="h-3 w-3" />
+                    {formatRelativeTime(project.updatedAt)}
+                </div>
+                <div className="flex items-center gap-1">
+                    <Network className="h-3 w-3" />
+                    {0} nodes
+                </div>
+            </CardFooter>
 
             <ProjectDeleteConfirmationDialog
                 open={isProjectDeleteDialogOpen}
@@ -253,6 +328,6 @@ export function ProjectItem({ project }: { project: Project }) {
                 projectName={project.name}
                 onConfirm={handleDeleteProject}
             />
-        </div>
+        </Card>
     );
 }
