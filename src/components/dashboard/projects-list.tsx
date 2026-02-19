@@ -16,6 +16,57 @@ import { FolderCode } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CreateProjectDialog } from "@/components/dashboard/create-project-dialog";
 import { ProjectItem } from "@/components/dashboard/project-item";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardFooter, CardHeader, CardTitle } from "../ui/card";
+import { cn } from "@/lib/utils";
+
+/**
+ * ProjectsListSkeleton component for displaying loading placeholders
+ *
+ * @returns {JSX.Element} The skeleton component.
+ */
+function ProjectsListSkeleton() {
+    return (
+        <div className="w-full">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {Array.from({ length: 8 }).map((_, index) => (
+                    <Card
+                        key={index}
+                        className={cn(
+                            "flex flex-col justify-between rounded-md border border-border",
+                            "bg-card/50 backdrop-blur group-hover:bg-accent/50 transition-colors",
+                            "min-w-md hover:border-foreground/20 group",
+                            "z-10 p-0"
+                        )}
+                    >
+                        <div className="size-full min-h-30 bg-muted/30 p-4 relative overflow-hidden flex">
+                            <Skeleton className="w-12 h-12 rounded-lg" />
+                        </div>
+
+                        <CardHeader className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <CardTitle className="text-lg font-semibold truncate max-w-full">
+                                    <Skeleton className="h-6 w-3/4" />
+                                </CardTitle>
+                            </div>
+                        </CardHeader>
+
+                        <CardFooter className="p-4 pt-0 flex items-center gap-4 text-[11px] text-muted-foreground">
+                            <div className="flex items-center gap-1">
+                                <Skeleton className="h-3 w-3" />
+                                <Skeleton className="h-3 w-16" />
+                            </div>
+                            <div className="flex items-center gap-1">
+                                <Skeleton className="h-3 w-3" />
+                                <Skeleton className="h-3 w-10" />
+                            </div>
+                        </CardFooter>
+                    </Card>
+                ))}
+            </div>
+        </div>
+    );
+}
 
 /**
  * ProjectsList component displays and manages user's projects
@@ -90,7 +141,7 @@ export function ProjectsList() {
     }, []);
 
     if (loading) {
-        return <div className="text-center py-8 animate-pulse">Loading projects...</div>;
+        return <ProjectsListSkeleton />;
     }
 
     if (error) {

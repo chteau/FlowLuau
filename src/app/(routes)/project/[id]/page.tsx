@@ -1,17 +1,90 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { ProjectsModel as Projects, ScriptsModel as Scripts } from "@/generated/models";
-import { Button } from "@/components/ui/button";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
-import { SidebarNav } from "@/components/dashboard/sidebar-nav";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ProjectHeader } from "@/components/project/project-header";
-import { ScriptList } from "@/components/project/script-list";
 import { ScriptEditor } from "@/components/project/script-editor";
+import { ScriptList } from "@/components/project/script-list";
+import { ScriptsModel as Scripts, ProjectsModel as Projects } from "@/generated/models";
+import { useCallback, useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+
+/**
+ * Skeleton loader component for ProjectPage during initial data fetch
+ *
+ * Provides visual placeholders matching the layout structure of the fully loaded
+ * project workspace to maintain layout stability and improve perceived performance
+ * during loading states.
+ *
+ * Visual structure:
+ * - Header section with avatar placeholder and title placeholder
+ * - Two-column layout matching ScriptList (left) and ScriptEditor (right) proportions
+ * - ScriptList placeholder contains search input and 5 script item placeholders
+ * - ScriptEditor placeholder fills remaining space with full-size skeleton
+ *
+ * Performance characteristics:
+ * - Pure presentational component with no state or side effects
+ * - Minimal re-renders (static structure)
+ * - Uses Skeleton component primitives for consistent loading aesthetics
+ *
+ * @component
+ * @returns {JSX.Element} Loading state placeholders matching ProjectPage layout
+ *
+ * @example
+ * // Usage during data fetch loading state
+ * {loading ? <ProjectPageSkeleton /> : <ProjectPageContent />}
+ */
+function ProjectPageSkeleton() {
+    return (
+        <div className="flex h-screen overflow-hidden bg-background">
+            <div className="flex flex-1 flex-col overflow-hidden">
+                <div className="flex items-center justify-between p-4 border-b">
+                    <div className="flex items-center gap-4">
+                        <Skeleton className="h-8 w-8" />
+                        <Skeleton className="h-6 w-40" />
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Skeleton className="h-8 w-20" />
+                        <Skeleton className="h-8 w-20" />
+                    </div>
+                </div>
+                <div className="flex flex-1 overflow-hidden">
+                    <div className="w-64 border-r p-4 space-y-4">
+                        <Skeleton className="h-8 w-full" />
+                        <div className="space-y-2">
+                            {Array.from({ length: 5 }).map((_, index) => (
+                                <Skeleton key={index} className="h-10 w-full" />
+                            ))}
+                        </div>
+                    </div>
+                    <div className="flex-1 p-4">
+                        <Skeleton className="h-full w-full" />
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
 
 /**
  * ProjectPage component renders the script editing interface for a specific project
@@ -66,83 +139,143 @@ export default function ProjectPage() {
     // ===== STATE MANAGEMENT =====
     /**
      * Current project data fetched from API
+     *
+     * Holds the complete project metadata including id, name, timestamps, and ownership.
+     * Initialized as null during loading state and populated after successful API fetch.
+     *
+     * @state
      * @type {Projects | null}
-     * @default null (loading state)
+     * @default null
      */
     const [project, setProject] = useState<Projects | null>(null);
 
     /**
      * List of scripts associated with the current project
+     *
+     * Array of script metadata objects retrieved from the backend API.
+     * Each script contains id, name, projectId, and timestamps for display in ScriptList.
+     *
+     * @state
      * @type {Scripts[]}
-     * @default [] (empty array during loading)
+     * @default []
      */
     const [scripts, setScripts] = useState<Scripts[]>([]);
 
     /**
      * Currently selected script for editing in ScriptEditor
+     *
+     * Represents the active script context for the visual scripting canvas.
+     * When null, ScriptEditor displays empty state prompting script selection.
+     *
+     * @state
      * @type {Scripts | null}
-     * @default null (no script selected)
+     * @default null
      */
     const [selectedScript, setSelectedScript] = useState<Scripts | null>(null);
 
     /**
-     * Loading state for initial data fetch
+     * Loading state for initial data fetch operations
+     *
+     * Controls display of ProjectPageSkeleton during initial project/script data retrieval.
+     * Set to false after successful fetch or error occurrence.
+     *
+     * @state
      * @type {boolean}
-     * @default true (prevents rendering before data available)
+     * @default true
      */
     const [loading, setLoading] = useState(true);
 
     /**
-     * Error state for API failures
+     * Error state capturing API fetch failures
+     *
+     * Holds user-facing error messages from failed network requests or invalid responses.
+     * Displayed as inline error text when non-null after loading completes.
+     *
+     * @state
      * @type {string | null}
-     * @default null (no error)
+     * @default null
      */
     const [error, setError] = useState<string | null>(null);
 
     /**
-     * Dialog visibility state for script creation
+     * Dialog visibility state for script creation workflow
+     *
+     * Controls display of the "Create New Script" dialog triggered by the
+     * "New Script" button in ScriptList component.
+     *
+     * @state
      * @type {boolean}
-     * @default false (hidden)
+     * @default false
      */
     const [isCreateDialogOpen, setCreateDialogOpen] = useState(false);
 
     /**
-     * Dialog visibility state for script renaming
+     * Dialog visibility state for script renaming workflow
+     *
+     * Controls display of the "Rename Script" dialog triggered by right-click
+     * context menu or action button on existing scripts.
+     *
+     * @state
      * @type {boolean}
-     * @default false (hidden)
+     * @default false
      */
     const [isRenameDialogOpen, setRenameDialogOpen] = useState(false);
 
     /**
      * Dialog visibility state for script deletion confirmation
+     *
+     * Controls display of the destructive action confirmation dialog before
+     * permanently removing a script from the project.
+     *
+     * @state
      * @type {boolean}
-     * @default false (hidden)
+     * @default false
      */
     const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
     /**
-     * Script targeted for rename operation (holds original data during edit)
+     * Script reference targeted for rename operation
+     *
+     * Holds the complete script object being renamed to preserve metadata during
+     * the rename dialog interaction. Reset to null after successful rename or cancel.
+     *
+     * @state
      * @type {Scripts | null}
-     * @default null (no active rename operation)
+     * @default null
      */
     const [scriptToRename, setScriptToRename] = useState<Scripts | null>(null);
 
     /**
-     * Script targeted for deletion (holds data for confirmation dialog)
+     * Script reference targeted for deletion operation
+     *
+     * Holds the complete script object being deleted to display name in confirmation
+     * dialog and execute deletion API call. Reset to null after deletion or cancel.
+     *
+     * @state
      * @type {Scripts | null}
-     * @default null (no active delete operation)
+     * @default null
      */
     const [scriptToDelete, setScriptToDelete] = useState<Scripts | null>(null);
 
     /**
      * Input value for new script name during creation
+     *
+     * Controlled input state for the script name field in the creation dialog.
+     * Validated before API submission to prevent empty names.
+     *
+     * @state
      * @type {string}
-     * @default "" (empty)
+     * @default ""
      */
     const [newScriptName, setNewScriptName] = useState("");
 
     /**
      * Input value for renamed script name during edit
+     *
+     * Controlled input state pre-populated with current script name when rename
+     * dialog opens. Allows user to modify name before submission.
+     *
+     * @state
      * @type {string}
      * @default "" (populated from scriptToRename.name when dialog opens)
      */
@@ -155,36 +288,38 @@ export default function ProjectPage() {
 
     // ===== DATA FETCHING =====
     /**
-     * Fetches project details and associated scripts from API
+     * Fetches project details and associated scripts from backend API
      *
-     * Performs two parallel requests:
-     * 1. GET /api/projects/{projectId} - retrieves project metadata
-     * 2. GET /api/projects/{projectId}/scripts - retrieves script list
+     * Executes two parallel API requests to retrieve:
+     * 1. Project metadata from /api/projects/{projectId}
+     * 2. Script list from /api/projects/{projectId}/scripts
      *
      * Implements comprehensive error handling with user-friendly messages.
-     * Updates loading state during fetch and error state on failure.
+     * Updates loading state during fetch operations and error state on failures.
+     * Resets error state before new fetch attempts to prevent stale messages.
+     *
+     * Security note: All endpoints require authentication enforced by backend middleware.
+     * Project ownership validation occurs server-side before returning data.
      *
      * @callback
      * @async
-     * @returns {Promise<void>} Resolves when data fetch completes (success or failure)
-     * @sideEffect Sets project, scripts, loading, and error state
-     * @throws {Error} Network errors or non-2xx API responses
+     * @returns {Promise<void>} Resolves when both API requests complete (success or failure)
+     * @sideEffect Sets project, scripts, loading, and error state based on API responses
+     * @throws {Error} Network errors, non-2xx responses, or JSON parsing failures
      */
     const fetchProjectAndScripts = useCallback(async () => {
         if (projectId) {
             setLoading(true);
+            setError(null);
             try {
-                // Fetch project details
                 const projectResponse = await fetch(`/api/projects/${projectId}`);
                 if (!projectResponse.ok) throw new Error("Failed to fetch project");
                 const projectData = await projectResponse.json();
                 setProject(projectData);
 
-                // Fetch scripts for the project
                 const scriptsResponse = await fetch(`/api/projects/${projectId}/scripts`);
                 if (!scriptsResponse.ok) throw new Error("Failed to fetch scripts");
                 const scriptsData = await scriptsResponse.json();
-
                 setScripts(scriptsData);
             } catch (err) {
                 setError(err instanceof Error ? err.message : "An unknown error occurred");
@@ -195,12 +330,14 @@ export default function ProjectPage() {
     }, [projectId]);
 
     /**
-     * Effect hook to fetch project data on component mount or projectId change
+     * Effect hook triggering initial data fetch on component mount or projectId change
      *
-     * Triggers initial data load when component mounts or when navigating between projects.
-     * Dependencies limited to fetchProjectAndScripts callback (stable via useCallback).
+     * Automatically reloads project data when navigating between different projects
+     * via client-side routing. Uses stable fetchProjectAndScripts callback to prevent
+     * unnecessary re-renders while maintaining correct dependency tracking.
      *
      * @effect
+     * @dependency {string} projectId - Current project identifier from route parameters
      * @dependency {function} fetchProjectAndScripts - Stable data fetching callback
      */
     useEffect(() => {
@@ -211,7 +348,8 @@ export default function ProjectPage() {
     /**
      * Opens the script creation dialog with reset input state
      *
-     * Prepares UI for new script creation by clearing input field and showing dialog.
+     * Prepares the UI for new script creation by clearing the name input field
+     * and displaying the creation dialog. Ensures clean state for each creation attempt.
      *
      * @returns {void}
      * @sideEffect Sets newScriptName to empty string and opens create dialog
@@ -224,11 +362,12 @@ export default function ProjectPage() {
     /**
      * Opens the script rename dialog pre-populated with current script name
      *
-     * Initializes rename operation by storing target script reference and current name.
+     * Initializes the rename workflow by storing the target script reference and
+     * copying its current name into the editable input field for modification.
      *
-     * @param {Scripts} script - Script to be renamed
+     * @param {Scripts} script - Script object targeted for renaming
      * @returns {void}
-     * @sideEffect Sets scriptToRename and renamedScriptName state; opens rename dialog
+     * @sideEffect Sets scriptToRename reference and renamedScriptName input value; opens rename dialog
      */
     const openRenameDialog = (script: Scripts) => {
         setScriptToRename(script);
@@ -239,11 +378,12 @@ export default function ProjectPage() {
     /**
      * Opens the script deletion confirmation dialog
      *
-     * Prepares destructive operation confirmation by storing target script reference.
+     * Initiates the destructive deletion workflow by storing the target script reference
+     * for display in the confirmation dialog and subsequent API operation.
      *
-     * @param {Scripts} script - Script to be deleted
+     * @param {Scripts} script - Script object targeted for deletion
      * @returns {void}
-     * @sideEffect Sets scriptToDelete state; opens delete confirmation dialog
+     * @sideEffect Sets scriptToDelete reference; opens delete confirmation dialog
      */
     const openDeleteDialog = (script: Scripts) => {
         setScriptToDelete(script);
@@ -254,13 +394,17 @@ export default function ProjectPage() {
     /**
      * Creates a new script via API and refreshes project data
      *
-     * Validates input before API call to prevent empty names. On success, re-fetches
-     * project scripts to update UI. Handles errors with user feedback.
+     * Validates input to prevent empty script names before submitting to the backend.
+     * On successful creation, triggers a full re-fetch of project scripts to update
+     * the UI with the new script. Automatically closes the creation dialog on success.
+     *
+     * Error handling: Captures API errors and network failures, displaying user-friendly
+     * messages without exposing sensitive backend details.
      *
      * @async
      * @returns {Promise<void>}
-     * @sideEffect Triggers API POST request; updates scripts state via re-fetch; closes dialog on success
-     * @throws {Error} API errors or network failures
+     * @sideEffect Triggers POST request to /api/scripts; refreshes scripts list; closes dialog on success
+     * @throws {Error} API errors (non-2xx responses) or network failures
      */
     const handleCreateScript = async () => {
         if (!newScriptName.trim() || !projectId) return;
@@ -271,7 +415,7 @@ export default function ProjectPage() {
                 body: JSON.stringify({ name: newScriptName, projectId }),
             });
             if (!response.ok) throw new Error('Failed to create script');
-            await fetchProjectAndScripts(); // Re-fetch
+            await fetchProjectAndScripts();
             setCreateDialogOpen(false);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'An unknown error occurred');
@@ -281,13 +425,17 @@ export default function ProjectPage() {
     /**
      * Renames an existing script via API and refreshes project data
      *
-     * Validates input before API call. On success, re-fetches project scripts to update UI
-     * and clears rename operation state. Handles errors with user feedback.
+     * Validates input to prevent empty names before submitting the rename operation.
+     * On success, triggers a full re-fetch of project scripts to update all UI components.
+     * Resets rename operation state by clearing scriptToRename reference and closing dialog.
+     *
+     * Safety: Operation requires valid scriptToRename reference to prevent accidental
+     * renames of undefined scripts. Backend enforces project ownership validation.
      *
      * @async
      * @returns {Promise<void>}
-     * @sideEffect Triggers API PUT request; updates scripts state via re-fetch; closes dialog on success
-     * @throws {Error} API errors, network failures, or missing scriptToRename reference
+     * @sideEffect Triggers PUT request to /api/scripts/{id}; refreshes scripts list; closes dialog on success
+     * @throws {Error} API errors, network failures, or missing script reference
      */
     const handleRenameScript = async () => {
         if (!renamedScriptName.trim() || !scriptToRename) return;
@@ -298,7 +446,7 @@ export default function ProjectPage() {
                 body: JSON.stringify({ name: renamedScriptName }),
             });
             if (!response.ok) throw new Error('Failed to rename script');
-            await fetchProjectAndScripts(); // Re-fetch
+            await fetchProjectAndScripts();
             setRenameDialogOpen(false);
             setScriptToRename(null);
         } catch (err) {
@@ -309,14 +457,19 @@ export default function ProjectPage() {
     /**
      * Deletes a script via API and refreshes project data
      *
-     * Performs destructive operation with confirmation. On success, re-fetches scripts,
-     * clears selection if deleted script was active, and resets operation state.
-     * Handles errors with user feedback.
+     * Executes destructive deletion after explicit user confirmation. On success:
+     * 1. Triggers full re-fetch of project scripts
+     * 2. Clears selectedScript if the deleted script was active
+     * 3. Resets deletion operation state
+     * 4. Closes confirmation dialog
+     *
+     * Safety: Requires explicit confirmation dialog to prevent accidental data loss.
+     * Backend enforces project ownership validation before deletion.
      *
      * @async
      * @returns {Promise<void>}
-     * @sideEffect Triggers API DELETE request; updates scripts state via re-fetch; clears selection if needed; closes dialog on success
-     * @throws {Error} API errors, network failures, or missing scriptToDelete reference
+     * @sideEffect Triggers DELETE request to /api/scripts/{id}; refreshes scripts list; clears selection if needed; closes dialog on success
+     * @throws {Error} API errors, network failures, or missing script reference
      */
     const handleDeleteScript = async () => {
         if (!scriptToDelete) return;
@@ -325,9 +478,9 @@ export default function ProjectPage() {
                 method: 'DELETE',
             });
             if (!response.ok) throw new Error('Failed to delete script');
-            await fetchProjectAndScripts(); // Re-fetch
+            await fetchProjectAndScripts();
             if (selectedScript?.id === scriptToDelete.id) {
-                setSelectedScript(null); // Clear selection if deleted
+                setSelectedScript(null);
             }
             setDeleteDialogOpen(false);
             setScriptToDelete(null);
@@ -337,10 +490,9 @@ export default function ProjectPage() {
     };
 
     // ===== RENDERING =====
-    // Loading and error states
-    if (loading) return <div>Loading project...</div>;
-    if (error) return <div>Error: {error}</div>;
-    if (!project) return <div>Project not found.</div>;
+    if (loading) return <ProjectPageSkeleton />;
+    if (error) return <div className="p-6 text-destructive">Error: {error}</div>;
+    if (!project) return <div className="p-6 text-muted-foreground">Project not found.</div>;
 
     return (
         <div className="flex h-screen overflow-hidden bg-background">
