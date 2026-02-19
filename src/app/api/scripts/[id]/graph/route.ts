@@ -1,6 +1,7 @@
 import { getServerSession } from "@/lib/auth/utils/get-session";
 import { prisma } from "@/lib/db";
 import { NextResponse } from "next/server";
+import { randomUUID } from "crypto";
 
 /**
  * PUT handler to update a script's graphs (nodes and edges).
@@ -40,26 +41,29 @@ export async function PUT(
             where: { scriptId: id }
         });
 
-        if (!existingGraph) {
-            return notFoundResponse("Graph");
-        }
-
-        const updatedScript = await prisma.scripts.update({
-            where: { id },
-            data: {
-                graphs: {
-                    update: {
-                        where: { id: existingGraph.id },
-                        data: {
-                            nodes,
-                            edges,
-                        },
+        if (existingGraph) {
+            const updatedGraph = await prisma.graphs.update({
+                where: { id: existingGraph.id },
+                data: {
+                    nodes,
+                    edges,
+                },
+            });
+            return NextResponse.json(updatedGraph);
+        } else {
+            const newGraph = await prisma.graphs.create({
+                data: {
+                    id: randomUUID(),
+                    name: "main",
+                    nodes,
+                    edges,
+                    script: {
+                        connect: { id: id }
                     }
                 }
-            },
-        });
-
-        return NextResponse.json(updatedScript);
+            });
+            return NextResponse.json(newGraph);
+        }
     } catch (error) {
         if (isPrismaNotFoundError(error)) {
             return notFoundResponse("Script");

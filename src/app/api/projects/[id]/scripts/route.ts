@@ -120,6 +120,9 @@ async function fetchProjectScripts(projectId: string) {
     return prisma.scripts.findMany({
         where: { projectId },
         orderBy: { updatedAt: "desc" },
+        include: {
+            graphs: true
+        }
     });
 }
 
