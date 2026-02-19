@@ -2,7 +2,7 @@
 
 import { ScriptsModel as Scripts } from "@/generated/models";
 import { Button } from "@/components/ui/button";
-import { Pen, ScrollText, Trash } from "lucide-react";
+import { Pen, Plus, ScrollText, Trash } from "lucide-react";
 
 /**
  * Properties interface for the ScriptList component
@@ -78,17 +78,16 @@ export function ScriptList({
     onDeleteScript
 }: ScriptListProps) {
     return (
-        <aside className="w-80 border-r border-border overflow-y-auto p-4 flex-col bg-sidebar/50 backdrop-blur z-10">
+        <aside className="w-64 border-r border-border overflow-y-auto p-4 flex-col bg-background z-10">
             {/* Header section with title and create button */}
             <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-bold">Scripts</h2>
                 <Button
-                    size="lg"
                     onClick={onCreateScript}
                     aria-label="Create new script"
-                    className="px-4 bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer"
+                    className="p-4 bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer"
                 >
-                    New Script
+                    <Plus className="size-5" />
                 </Button>
             </div>
 
