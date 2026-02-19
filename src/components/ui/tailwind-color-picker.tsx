@@ -70,37 +70,37 @@ const COLOR_OPTIONS: ColorOption[] = [
     {
         name: "Yellow",
         text: "text-yellow-400",
-        background: "bg-yellow-400",
+        background: "bg-yellow-400/30",
         preview: "bg-yellow-400",
     },
     {
         name: "Red",
         text: "text-red-400",
-        background: "bg-red-400",
+        background: "bg-red-400/30",
         preview: "bg-red-400",
     },
     {
         name: "Green",
         text: "text-green-400",
-        background: "bg-green-400",
+        background: "bg-green-400/30",
         preview: "bg-green-400",
     },
     {
         name: "Blue",
         text: "text-blue-400",
-        background: "bg-blue-400",
+        background: "bg-blue-400/30",
         preview: "bg-blue-400",
     },
     {
         name: "Purple",
         text: "text-purple-400",
-        background: "bg-purple-400",
+        background: "bg-purple-400/30",
         preview: "bg-purple-400",
     },
     {
         name: "Pink",
         text: "text-pink-400",
-        background: "bg-pink-400",
+        background: "bg-pink-400/30",
         preview: "bg-pink-400",
     },
 ];

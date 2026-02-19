@@ -27,6 +27,8 @@ export type AggregateProjects = {
 export type ProjectsMinAggregateOutputType = {
   id: string | null
   name: string | null
+  description: string | null
+  robloxUniverseId: string | null
   userId: string | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -35,6 +37,8 @@ export type ProjectsMinAggregateOutputType = {
 export type ProjectsMaxAggregateOutputType = {
   id: string | null
   name: string | null
+  description: string | null
+  robloxUniverseId: string | null
   userId: string | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -43,6 +47,9 @@ export type ProjectsMaxAggregateOutputType = {
 export type ProjectsCountAggregateOutputType = {
   id: number
   name: number
+  description: number
+  color: number
+  robloxUniverseId: number
   userId: number
   createdAt: number
   updatedAt: number
@@ -53,6 +60,8 @@ export type ProjectsCountAggregateOutputType = {
 export type ProjectsMinAggregateInputType = {
   id?: true
   name?: true
+  description?: true
+  robloxUniverseId?: true
   userId?: true
   createdAt?: true
   updatedAt?: true
@@ -61,6 +70,8 @@ export type ProjectsMinAggregateInputType = {
 export type ProjectsMaxAggregateInputType = {
   id?: true
   name?: true
+  description?: true
+  robloxUniverseId?: true
   userId?: true
   createdAt?: true
   updatedAt?: true
@@ -69,6 +80,9 @@ export type ProjectsMaxAggregateInputType = {
 export type ProjectsCountAggregateInputType = {
   id?: true
   name?: true
+  description?: true
+  color?: true
+  robloxUniverseId?: true
   userId?: true
   createdAt?: true
   updatedAt?: true
@@ -150,6 +164,9 @@ export type ProjectsGroupByArgs<ExtArgs extends runtime.Types.Extensions.Interna
 export type ProjectsGroupByOutputType = {
   id: string
   name: string
+  description: string | null
+  color: runtime.JsonValue | null
+  robloxUniverseId: string | null
   userId: string
   createdAt: Date
   updatedAt: Date
@@ -179,6 +196,9 @@ export type ProjectsWhereInput = {
   NOT?: Prisma.ProjectsWhereInput | Prisma.ProjectsWhereInput[]
   id?: Prisma.StringFilter<"Projects"> | string
   name?: Prisma.StringFilter<"Projects"> | string
+  description?: Prisma.StringNullableFilter<"Projects"> | string | null
+  color?: Prisma.JsonNullableFilter<"Projects">
+  robloxUniverseId?: Prisma.StringNullableFilter<"Projects"> | string | null
   userId?: Prisma.StringFilter<"Projects"> | string
   createdAt?: Prisma.DateTimeFilter<"Projects"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Projects"> | Date | string
@@ -189,6 +209,9 @@ export type ProjectsWhereInput = {
 export type ProjectsOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  description?: Prisma.SortOrderInput | Prisma.SortOrder
+  color?: Prisma.SortOrderInput | Prisma.SortOrder
+  robloxUniverseId?: Prisma.SortOrderInput | Prisma.SortOrder
   userId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -202,6 +225,9 @@ export type ProjectsWhereUniqueInput = Prisma.AtLeast<{
   OR?: Prisma.ProjectsWhereInput[]
   NOT?: Prisma.ProjectsWhereInput | Prisma.ProjectsWhereInput[]
   name?: Prisma.StringFilter<"Projects"> | string
+  description?: Prisma.StringNullableFilter<"Projects"> | string | null
+  color?: Prisma.JsonNullableFilter<"Projects">
+  robloxUniverseId?: Prisma.StringNullableFilter<"Projects"> | string | null
   userId?: Prisma.StringFilter<"Projects"> | string
   createdAt?: Prisma.DateTimeFilter<"Projects"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Projects"> | Date | string
@@ -212,6 +238,9 @@ export type ProjectsWhereUniqueInput = Prisma.AtLeast<{
 export type ProjectsOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  description?: Prisma.SortOrderInput | Prisma.SortOrder
+  color?: Prisma.SortOrderInput | Prisma.SortOrder
+  robloxUniverseId?: Prisma.SortOrderInput | Prisma.SortOrder
   userId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -226,6 +255,9 @@ export type ProjectsScalarWhereWithAggregatesInput = {
   NOT?: Prisma.ProjectsScalarWhereWithAggregatesInput | Prisma.ProjectsScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"Projects"> | string
   name?: Prisma.StringWithAggregatesFilter<"Projects"> | string
+  description?: Prisma.StringNullableWithAggregatesFilter<"Projects"> | string | null
+  color?: Prisma.JsonNullableWithAggregatesFilter<"Projects">
+  robloxUniverseId?: Prisma.StringNullableWithAggregatesFilter<"Projects"> | string | null
   userId?: Prisma.StringWithAggregatesFilter<"Projects"> | string
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Projects"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Projects"> | Date | string
@@ -234,6 +266,9 @@ export type ProjectsScalarWhereWithAggregatesInput = {
 export type ProjectsCreateInput = {
   id: string
   name: string
+  description?: string | null
+  color?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  robloxUniverseId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   user: Prisma.UserCreateNestedOneWithoutProjectsInput
@@ -243,6 +278,9 @@ export type ProjectsCreateInput = {
 export type ProjectsUncheckedCreateInput = {
   id: string
   name: string
+  description?: string | null
+  color?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  robloxUniverseId?: string | null
   userId: string
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -252,6 +290,9 @@ export type ProjectsUncheckedCreateInput = {
 export type ProjectsUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  color?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  robloxUniverseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   user?: Prisma.UserUpdateOneRequiredWithoutProjectsNestedInput
@@ -261,6 +302,9 @@ export type ProjectsUpdateInput = {
 export type ProjectsUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  color?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  robloxUniverseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -270,6 +314,9 @@ export type ProjectsUncheckedUpdateInput = {
 export type ProjectsCreateManyInput = {
   id: string
   name: string
+  description?: string | null
+  color?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  robloxUniverseId?: string | null
   userId: string
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -278,6 +325,9 @@ export type ProjectsCreateManyInput = {
 export type ProjectsUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  color?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  robloxUniverseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -285,6 +335,9 @@ export type ProjectsUpdateManyMutationInput = {
 export type ProjectsUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  color?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  robloxUniverseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -303,6 +356,9 @@ export type ProjectsOrderByRelationAggregateInput = {
 export type ProjectsCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  description?: Prisma.SortOrder
+  color?: Prisma.SortOrder
+  robloxUniverseId?: Prisma.SortOrder
   userId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -311,6 +367,8 @@ export type ProjectsCountOrderByAggregateInput = {
 export type ProjectsMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  description?: Prisma.SortOrder
+  robloxUniverseId?: Prisma.SortOrder
   userId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -319,6 +377,8 @@ export type ProjectsMaxOrderByAggregateInput = {
 export type ProjectsMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  description?: Prisma.SortOrder
+  robloxUniverseId?: Prisma.SortOrder
   userId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -388,6 +448,9 @@ export type ProjectsUpdateOneRequiredWithoutScriptsNestedInput = {
 export type ProjectsCreateWithoutUserInput = {
   id: string
   name: string
+  description?: string | null
+  color?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  robloxUniverseId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   scripts?: Prisma.ScriptsCreateNestedManyWithoutProjectInput
@@ -396,6 +459,9 @@ export type ProjectsCreateWithoutUserInput = {
 export type ProjectsUncheckedCreateWithoutUserInput = {
   id: string
   name: string
+  description?: string | null
+  color?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  robloxUniverseId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   scripts?: Prisma.ScriptsUncheckedCreateNestedManyWithoutProjectInput
@@ -433,6 +499,9 @@ export type ProjectsScalarWhereInput = {
   NOT?: Prisma.ProjectsScalarWhereInput | Prisma.ProjectsScalarWhereInput[]
   id?: Prisma.StringFilter<"Projects"> | string
   name?: Prisma.StringFilter<"Projects"> | string
+  description?: Prisma.StringNullableFilter<"Projects"> | string | null
+  color?: Prisma.JsonNullableFilter<"Projects">
+  robloxUniverseId?: Prisma.StringNullableFilter<"Projects"> | string | null
   userId?: Prisma.StringFilter<"Projects"> | string
   createdAt?: Prisma.DateTimeFilter<"Projects"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Projects"> | Date | string
@@ -441,6 +510,9 @@ export type ProjectsScalarWhereInput = {
 export type ProjectsCreateWithoutScriptsInput = {
   id: string
   name: string
+  description?: string | null
+  color?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  robloxUniverseId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   user: Prisma.UserCreateNestedOneWithoutProjectsInput
@@ -449,6 +521,9 @@ export type ProjectsCreateWithoutScriptsInput = {
 export type ProjectsUncheckedCreateWithoutScriptsInput = {
   id: string
   name: string
+  description?: string | null
+  color?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  robloxUniverseId?: string | null
   userId: string
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -473,6 +548,9 @@ export type ProjectsUpdateToOneWithWhereWithoutScriptsInput = {
 export type ProjectsUpdateWithoutScriptsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  color?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  robloxUniverseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   user?: Prisma.UserUpdateOneRequiredWithoutProjectsNestedInput
@@ -481,6 +559,9 @@ export type ProjectsUpdateWithoutScriptsInput = {
 export type ProjectsUncheckedUpdateWithoutScriptsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  color?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  robloxUniverseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -489,6 +570,9 @@ export type ProjectsUncheckedUpdateWithoutScriptsInput = {
 export type ProjectsCreateManyUserInput = {
   id: string
   name: string
+  description?: string | null
+  color?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  robloxUniverseId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -496,6 +580,9 @@ export type ProjectsCreateManyUserInput = {
 export type ProjectsUpdateWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  color?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  robloxUniverseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   scripts?: Prisma.ScriptsUpdateManyWithoutProjectNestedInput
@@ -504,6 +591,9 @@ export type ProjectsUpdateWithoutUserInput = {
 export type ProjectsUncheckedUpdateWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  color?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  robloxUniverseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   scripts?: Prisma.ScriptsUncheckedUpdateManyWithoutProjectNestedInput
@@ -512,6 +602,9 @@ export type ProjectsUncheckedUpdateWithoutUserInput = {
 export type ProjectsUncheckedUpdateManyWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  color?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  robloxUniverseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -550,6 +643,9 @@ export type ProjectsCountOutputTypeCountScriptsArgs<ExtArgs extends runtime.Type
 export type ProjectsSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   name?: boolean
+  description?: boolean
+  color?: boolean
+  robloxUniverseId?: boolean
   userId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -561,6 +657,9 @@ export type ProjectsSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
 export type ProjectsSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   name?: boolean
+  description?: boolean
+  color?: boolean
+  robloxUniverseId?: boolean
   userId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -570,6 +669,9 @@ export type ProjectsSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exte
 export type ProjectsSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   name?: boolean
+  description?: boolean
+  color?: boolean
+  robloxUniverseId?: boolean
   userId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -579,12 +681,15 @@ export type ProjectsSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exte
 export type ProjectsSelectScalar = {
   id?: boolean
   name?: boolean
+  description?: boolean
+  color?: boolean
+  robloxUniverseId?: boolean
   userId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type ProjectsOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "userId" | "createdAt" | "updatedAt", ExtArgs["result"]["projects"]>
+export type ProjectsOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "description" | "color" | "robloxUniverseId" | "userId" | "createdAt" | "updatedAt", ExtArgs["result"]["projects"]>
 export type ProjectsInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   scripts?: boolean | Prisma.Projects$scriptsArgs<ExtArgs>
@@ -606,6 +711,9 @@ export type $ProjectsPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
     name: string
+    description: string | null
+    color: runtime.JsonValue | null
+    robloxUniverseId: string | null
     userId: string
     createdAt: Date
     updatedAt: Date
@@ -1036,6 +1144,9 @@ export interface Prisma__ProjectsClient<T, Null = never, ExtArgs extends runtime
 export interface ProjectsFieldRefs {
   readonly id: Prisma.FieldRef<"Projects", 'String'>
   readonly name: Prisma.FieldRef<"Projects", 'String'>
+  readonly description: Prisma.FieldRef<"Projects", 'String'>
+  readonly color: Prisma.FieldRef<"Projects", 'Json'>
+  readonly robloxUniverseId: Prisma.FieldRef<"Projects", 'String'>
   readonly userId: Prisma.FieldRef<"Projects", 'String'>
   readonly createdAt: Prisma.FieldRef<"Projects", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Projects", 'DateTime'>
