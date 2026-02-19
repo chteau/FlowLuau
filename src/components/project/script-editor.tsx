@@ -590,7 +590,7 @@ function EditorCanvas({ selectedScript }: ScriptEditorProps) {
             let initialNodes: FlowNode[] = [];
             let initialEdges: FlowEdge[] = [];
 
-            if (graph && graph.nodes) {
+            if (graph && graph.nodes.length > 0) {
                 // @ts-ignore
                 initialNodes = graph.nodes as FlowNode[];
             } else {
@@ -606,7 +606,7 @@ function EditorCanvas({ selectedScript }: ScriptEditorProps) {
                 ];
             }
 
-            if (graph && graph.edges) {
+            if (graph && graph.edges.length > 0) {
                 // @ts-ignore
                 initialEdges = graph.edges as FlowEdge[];
             }
@@ -721,6 +721,14 @@ function EditorCanvas({ selectedScript }: ScriptEditorProps) {
             document.removeEventListener("keydown", handleKeyDown);
         };
     }, [nodePickerMenu, nodeContextMenu, edgeContextMenu]);
+
+    /**
+     * Handles saving the current graph whenever needed.
+     */
+    useEffect(() => {
+        saveAction.current = saveGraph;
+    }, [saveGraph]);
+
 
     return (
         <div className="h-full w-full" ref={ref}>
