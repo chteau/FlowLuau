@@ -211,7 +211,8 @@ function EditorCanvas({ selectedScript }: ScriptEditorProps) {
                 });
 
                 if (!response.ok) {
-                    throw new Error('Failed to save graph');
+                    // throw new Error('Failed to save graph');
+                    console.warn(`Failed to save graph: ${response.statusText}`);
                 }
             }
 
