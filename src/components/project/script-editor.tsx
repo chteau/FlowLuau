@@ -26,77 +26,115 @@ import { LuauType } from "@/types/luau";
 import { cn } from "@/lib/utils";
 
 /**
- * Properties interface for the ScriptEditor component
+ * Props interface for the ScriptEditor component
+ *
+ * Defines the contract for script selection and optional pre-loaded graph state.
+ *
+ * @interface
+ * @property {Scripts | null} selectedScript - Currently active script for editing
+ *   When null, displays empty state prompting user to select/create a script
+ * @property {FlowNode[]} [nodes] - Optional pre-initialized node array
+ *   Used for server-side hydration or external graph state injection
+ * @property {FlowEdge[]} [edges] - Optional pre-initialized edge array
+ *   Used for server-side hydration or external graph state injection
  */
 export interface ScriptEditorProps {
-    /** Currently selected script to edit, or null if none selected */
     selectedScript: Scripts | null;
+    nodes?: FlowNode[];
+    edges?: FlowEdge[];
 }
 
 /**
- * Interface for node picker context menu position and state
+ * Configuration object for node picker context menu during connection creation
+ *
+ * Captures the state of an in-progress connection drag operation to enable
+ * intelligent node creation at the drop location with automatic connection.
+ *
+ * @interface
+ * @property {number} x - Canvas X coordinate for menu positioning (relative to pane)
+ * @property {number} y - Canvas Y coordinate for menu positioning (relative to pane)
+ * @property {string} sourceNodeId - ID of node initiating the connection drag
+ * @property {string | null} sourceHandleId - Specific handle ID being dragged from source node
+ * @property {("source" | "target")} sourceHandleType - Direction of connection initiation
+ *   "source" = dragging from output handle, "target" = dragging from input handle
  */
 interface NodePickerMenu {
-    /** X coordinate for menu positioning */
     x: number;
-    /** Y coordinate for menu positioning */
     y: number;
-    /** ID of the source node initiating the connection */
     sourceNodeId: string;
-    /** ID of the specific handle being used */
     sourceHandleId: string | null;
-    /** Type of handle (source or target) */
     sourceHandleType: "source" | "target";
 }
 
 /**
- * Interface for node context menu position and state
+ * Configuration object for node context menu during right-click interactions
+ *
+ * Captures positional and identity information for node manipulation operations.
+ *
+ * @interface
+ * @property {string} id - Unique identifier of the target node
+ * @property {number} x - Canvas X coordinate for menu positioning (relative to pane)
+ * @property {number} y - Canvas Y coordinate for menu positioning (relative to pane)
  */
 interface NodeContextMenu {
-    /** ID of the node being right-clicked */
     id: string;
-    /** X coordinate for menu positioning */
     x: number;
-    /** Y coordinate for menu positioning */
     y: number;
 }
 
 /**
- * Interface for edge context menu position and state
+ * Configuration object for edge context menu during right-click interactions
+ *
+ * Captures positional and identity information for edge manipulation operations.
+ *
+ * @interface
+ * @property {string} id - Unique identifier of the target edge
+ * @property {number} x - Canvas X coordinate for menu positioning (relative to pane)
+ * @property {number} y - Canvas Y coordinate for menu positioning (relative to pane)
  */
 interface EdgeContextMenu {
-    /** ID of the edge being right-clicked */
     id: string;
-    /** X coordinate for menu positioning */
     x: number;
-    /** Y coordinate for menu positioning */
     y: number;
 }
 
 /**
  * EditorCanvas component provides the core visual scripting interface
  *
- * This component handles:
- * - Node and edge management for the visual scripting flow
- * - Connection validation based on Luau type compatibility
- * - Context menus for node creation and manipulation
- * - Canvas interactions (pan, zoom, context menus)
- * - Type-safe connections between nodes
+ * Manages the complete React Flow canvas experience including node/edge state,
+ * connection validation, context menus, and persistence operations. Implements
+ * Luau type-aware connection validation and intelligent node creation workflows.
  *
- * The component automatically:
- * - Initializes with a Start node when a script is selected
- * - Validates connections based on Luau type compatibility
- * - Provides context menus for node creation and manipulation
- * - Handles node deletion and cloning operations
- * - Manages connection flows from drag operations
+ * Key responsibilities:
+ * - Manages node and edge state with React Flow's state hooks
+ * - Validates connections based on Luau type compatibility rules
+ * - Handles context menus for node creation and manipulation
+ * - Implements auto-save with debouncing and unload protection
+ * - Provides empty-space connection completion via node picker
+ * - Supports node cloning, deletion, and edge removal operations
+ * - Initializes new scripts with mandatory Start node
+ *
+ * Type compatibility rules:
+ * - Connections require matching Luau types OR at least one side being LuauType.Any
+ * - Flow-type handles connect only to other Flow-type handles (execution control)
+ * - Data-type handles (Number, String, etc.) connect to matching or Any types
+ * - Type metadata propagated through edge.data for downstream inference
+ *
+ * Persistence behavior:
+ * - Auto-saves after 1.5 second debounce on graph changes
+ * - Saves immediately on component unmount/page navigation
+ * - Uses sendBeacon for unload saves to guarantee delivery
+ * - Prevents redundant saves when graph state unchanged
+ * - Persists to /api/scripts/{id}/graph endpoint via PUT request
  *
  * @component
  * @param {ScriptEditorProps} props - Component properties
+ * @param {Scripts | null} props.selectedScript - Active script context for operations
  *
  * @example
- * // Basic usage within ScriptEditor
+ * // Wrapped usage with ReactFlowProvider (required)
  * <ReactFlowProvider>
- *   <EditorCanvas selectedScript={selectedScript} />
+ *   <EditorCanvas selectedScript={currentScript} />
  * </ReactFlowProvider>
  */
 function EditorCanvas({ selectedScript }: ScriptEditorProps) {
@@ -109,27 +147,26 @@ function EditorCanvas({ selectedScript }: ScriptEditorProps) {
     const ref = useRef<HTMLDivElement>(null);
     const menuRef = useRef<HTMLDivElement | null>(null);
     const connectStartRef = useRef<OnConnectStartParams | null>(null);
+    const saveTimeout = useRef<NodeJS.Timeout | null>(null);
+    const initialLoadDone = useRef(false);
+    const lastSavedGraph = useRef<{ nodes: FlowNode[]; edges: FlowEdge[] } | null>(null);
+    const saveAction = useRef<((isUnloading?: boolean) => void) | undefined>(undefined);
 
     const { screenToFlowPosition } = useReactFlow();
 
     /**
-     * Initializes the editor with a Start node when a script is selected
+     * Resolves handle configuration from node component using dynamic or static methods
+     *
+     * Attempts to call component.getHandles(data) first for dynamic configuration,
+     * falling back to component.meta.handles for static configuration. Enables
+     * nodes to adapt handles based on current state (e.g., mode switches).
+     *
+     * @param {React.ComponentType} component - Node component constructor/class
+     * @param {FlowNode} node - Node instance containing current data state
+     * @returns {Object} Handle configuration object with inputs/outputs arrays
+     * @returns {Array} returns.inputs - Input handle definitions
+     * @returns {Array} returns.outputs - Output handle definitions
      */
-    useEffect(() => {
-        if (selectedScript) {
-            setNodes([
-                {
-                    id: "1",
-                    type: "Start",
-                    data: {},
-                    position: { x: 300, y: 50 },
-                    deletable: false,
-                    selectable: false,
-                },
-            ]);
-        }
-    }, [selectedScript, setNodes]);
-
     const resolveHandles = (component: any, node: FlowNode) => {
         if (component.getHandles) {
             return component.getHandles(node.data);
@@ -139,9 +176,64 @@ function EditorCanvas({ selectedScript }: ScriptEditorProps) {
     };
 
     /**
-     * Handles connection validation and creation between nodes
+     * Persists current graph state to backend API with change detection
      *
-     * Now supports dynamic handle validation via node's validateConnection method
+     * Compares current graph against last saved snapshot to prevent redundant saves.
+     * Uses sendBeacon for unload operations to guarantee delivery even during navigation.
+     * Requires valid selectedScript context to determine save endpoint.
+     *
+     * @callback
+     * @param {boolean} [isUnloading=false] - Flag indicating page navigation/unload context
+     *   When true, uses navigator.sendBeacon for guaranteed delivery
+     * @returns {Promise<void>} Resolves when save operation completes
+     * @sideEffect Persists graph state to /api/scripts/{id}/graph endpoint
+     */
+    const saveGraph = useCallback(async (isUnloading = false) => {
+        const currentGraph = { nodes, edges };
+        if (JSON.stringify(currentGraph) === JSON.stringify(lastSavedGraph.current)) {
+            console.log("No changes to save.");
+            return;
+        }
+        if (!selectedScript) return;
+
+        console.log("Auto-saving graph...");
+        try {
+            const body = JSON.stringify(currentGraph);
+            const url = `/api/scripts/${selectedScript.id}/graph`;
+
+            if (isUnloading) {
+                navigator.sendBeacon(url, body);
+            } else {
+                const response = await fetch(url, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: body,
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to save graph');
+                }
+            }
+
+            lastSavedGraph.current = currentGraph;
+            console.log("Graph saved successfully!");
+        } catch (error) {
+            console.error("Error saving graph:", error);
+        }
+    }, [nodes, edges, selectedScript]);
+
+    /**
+     * Validates and creates new edges between compatible nodes
+     *
+     * Enforces Luau type compatibility rules during connection creation:
+     * - Source and target handle types must match exactly OR
+     * - At least one handle must be LuauType.Any (polymorphic)
+     * - Stores actual source type in edge.data for downstream type inference
+     *
+     * @callback
+     * @param {Connection} connection - Proposed connection parameters from React Flow
+     * @returns {void}
+     * @sideEffect Adds valid edge to edges state; rejects incompatible connections
      */
     const onConnect = useCallback((connection: Connection) => {
         const sourceNode = nodes.find(n => n.id === connection.source);
@@ -173,29 +265,47 @@ function EditorCanvas({ selectedScript }: ScriptEditorProps) {
                 targetHandleType === LuauType.Any
             )
         ) {
-            setEdges(prev => addEdge(connection, prev));
+            const newEdge: FlowEdge = {
+                id: `edge-${connection.source}-${connection.target}-${Date.now()}`,
+                ...connection,
+                data: {
+                    sourceType: sourceHandleType,
+                    targetType: targetHandleType,
+                },
+            };
+
+            setEdges(prev => addEdge(newEdge, prev));
         }
     }, [nodes, setEdges]);
 
     /**
-     * Handles the start of a connection drag operation
+     * Captures connection initiation parameters for later completion handling
      *
-     * Stores connection start parameters for later use when the connection ends
+     * Stores source node/handle information when drag operation begins to enable
+     * intelligent node creation when connection ends on empty canvas space.
      *
-     * @param _ - Unused parameter (required by React Flow)
-     * @param params - Connection start parameters
+     * @callback
+     * @param {unknown} _ - Unused React Flow parameter (event object)
+     * @param {OnConnectStartParams} params - Connection start metadata
+     * @returns {void}
+     * @sideEffect Updates connectStartRef with drag initiation context
      */
     const onConnectStart = useCallback((_: any, params: OnConnectStartParams) => {
         connectStartRef.current = params;
     }, []);
 
     /**
-     * Handles the end of a connection drag operation
+     * Handles connection termination with intelligent node creation on empty space
      *
-     * Determines if the connection ended on empty space (triggering node picker)
-     * or on a valid target (completing the connection)
+     * Detects when connection drag ends without valid target and opens node picker
+     * menu at drop location. Enables fluid workflow: drag output → drop on canvas →
+     * select node type → auto-connect to new node.
      *
-     * @param event - Mouse or touch event ending the connection
+     * @callback
+     * @param {(MouseEvent | TouchEvent)} event - Termination event with coordinates
+     * @param {FinalConnectionState} connectionState - React Flow connection validation result
+     * @returns {void}
+     * @sideEffect Opens node picker menu when dropped on empty space; clears connection state
      */
     const onConnectEnd = useCallback((event: MouseEvent | TouchEvent, connectionState: FinalConnectionState) => {
         if (!connectStartRef.current || !ref.current) return;
@@ -227,11 +337,15 @@ function EditorCanvas({ selectedScript }: ScriptEditorProps) {
     }, []);
 
     /**
-     * Handles right-click on the canvas (empty space)
+     * Handles canvas right-click to open node creation menu
      *
-     * Opens the node picker menu at the clicked position
+     * Opens node picker at click location when user right-clicks empty canvas space.
+     * Provides quick access to all available node types for graph authoring.
      *
-     * @param event - Mouse event containing click coordinates
+     * @callback
+     * @param {(MouseEvent | React.MouseEvent<Element, MouseEvent>)} event - Right-click event
+     * @returns {void}
+     * @sideEffect Opens node picker menu at click coordinates; closes other menus
      */
     const onPaneContextMenu = useCallback((event: MouseEvent | React.MouseEvent<Element, MouseEvent>) => {
         event.preventDefault();
@@ -239,7 +353,6 @@ function EditorCanvas({ selectedScript }: ScriptEditorProps) {
 
         const pane = ref.current.getBoundingClientRect();
 
-        // Support both React and native events for clientX/clientY
         const clientX = 'clientX' in event ? event.clientX : 0;
         const clientY = 'clientY' in event ? event.clientY : 0;
 
@@ -255,13 +368,16 @@ function EditorCanvas({ selectedScript }: ScriptEditorProps) {
     }, []);
 
     /**
-     * Handles right-click on a node
+     * Handles node right-click to open manipulation menu
      *
-     * Opens the context menu for node manipulation (clone, delete)
-     * Prevents opening menu for Start node
+     * Opens context menu with clone/delete options at click location. Prevents
+     * menu opening for protected nodes (Start node) to maintain graph integrity.
      *
-     * @param event - Mouse event containing click coordinates
-     * @param node - Node that was right-clicked
+     * @callback
+     * @param {React.MouseEvent} event - Right-click event on node
+     * @param {FlowNode} node - Target node instance
+     * @returns {void}
+     * @sideEffect Opens node context menu at click coordinates; closes other menus
      */
     const onNodeContextMenu = useCallback((event: React.MouseEvent, node: FlowNode) => {
         event.preventDefault();
@@ -281,12 +397,15 @@ function EditorCanvas({ selectedScript }: ScriptEditorProps) {
     }, []);
 
     /**
-     * Handles right-click on an edge
+     * Handles edge right-click to open manipulation menu
      *
-     * Opens the context menu for edge manipulation (delete)
+     * Opens context menu with delete option at click location for edge removal.
      *
-     * @param event - Mouse event containing click coordinates
-     * @param edge - Edge that was right-clicked
+     * @callback
+     * @param {React.MouseEvent} event - Right-click event on edge
+     * @param {FlowEdge} edge - Target edge instance
+     * @returns {void}
+     * @sideEffect Opens edge context menu at click coordinates; closes other menus
      */
     const onEdgeContextMenu = useCallback((event: React.MouseEvent, edge: FlowEdge) => {
         event.preventDefault();
@@ -304,21 +423,28 @@ function EditorCanvas({ selectedScript }: ScriptEditorProps) {
     }, []);
 
     /**
-     * Adds a new node and optionally connects it to an existing node
+     * Creates new node with automatic connection to source handle
      *
-     * Now supports dynamic handle discovery via node's getHandles method
+     * Places node at menu coordinates and creates compatible connection based on
+     * source handle type and available target handles. Uses resolveHandles to
+     * discover dynamic handle configurations for intelligent connection matching.
+     *
+     * @param {string} nodeType - Registered node type identifier (e.g., "Add", "VariableGet")
+     * @returns {void}
+     * @sideEffect Adds node to graph state; creates edge if compatible handle found
      */
     const addNodeAndConnect = (nodeType: string) => {
-        if (!nodePickerMenu) return;
+        if (!nodePickerMenu || !selectedScript) return;
 
         const { x, y, sourceNodeId, sourceHandleId, sourceHandleType } = nodePickerMenu;
-
         const newNodeId = `${nodeType}-${Date.now()}`;
         const newNode: FlowNode = {
             id: newNodeId,
             type: nodeType,
             position: screenToFlowPosition({ x, y }),
-            data: {},
+            data: {
+                __scriptId: selectedScript.id,
+            },
         };
 
         setNodes(prev => [...prev, newNode]);
@@ -333,8 +459,6 @@ function EditorCanvas({ selectedScript }: ScriptEditorProps) {
 
         const sourceComponent = nodeTypes[sourceNode.type as keyof typeof nodeTypes] as any;
         const targetComponent = nodeTypes[nodeType as keyof typeof nodeTypes] as any;
-
-
 
         // Get source handle type
         let sourceHandle = resolveHandles(sourceComponent, sourceNode);
@@ -378,6 +502,10 @@ function EditorCanvas({ selectedScript }: ScriptEditorProps) {
                 targetHandle: sourceHandleType === "source"
                     ? targetHandleDef.id ?? undefined
                     : sourceHandleId ?? undefined,
+                data: {
+                    sourceType: sourceHandleTypeObj.type,
+                    targetType: targetHandleDef.type,
+                },
             };
 
             setEdges(prev => addEdge(newEdge, prev));
@@ -387,9 +515,14 @@ function EditorCanvas({ selectedScript }: ScriptEditorProps) {
     };
 
     /**
-     * Deletes a node and all connected edges
+     * Removes node and all connected edges from graph
      *
-     * @param id - ID of the node to delete
+     * Maintains graph integrity by automatically removing all edges connected to
+     * the deleted node. Protected nodes (Start) cannot be deleted via UI controls.
+     *
+     * @param {string} id - Unique identifier of node to remove
+     * @returns {void}
+     * @sideEffect Removes node and connected edges from state; closes context menu
      */
     const deleteNode = (id: string) => {
         setNodes(prev => prev.filter(n => n.id !== id));
@@ -398,9 +531,15 @@ function EditorCanvas({ selectedScript }: ScriptEditorProps) {
     };
 
     /**
-     * Creates a clone of a node with offset position
+     * Creates duplicate of existing node with positional offset
      *
-     * @param id - ID of the node to clone
+     * Copies all node properties including type, data, and styling with a small
+     * positional offset to prevent visual overlap. Useful for duplicating complex
+     * node configurations without rebuilding from scratch.
+     *
+     * @param {string} id - Unique identifier of node to clone
+     * @returns {void}
+     * @sideEffect Adds cloned node to graph state; closes context menu
      */
     const cloneNode = (id: string) => {
         const nodeToClone = nodes.find(n => n.id === id);
@@ -420,9 +559,14 @@ function EditorCanvas({ selectedScript }: ScriptEditorProps) {
     };
 
     /**
-     * Deletes an edge
+     * Removes edge from graph
      *
-     * @param id - ID of the edge to delete
+     * Disconnects two nodes by removing the edge object from state. Triggers
+     * revalidation of downstream type inference where applicable.
+     *
+     * @param {string} id - Unique identifier of edge to remove
+     * @returns {void}
+     * @sideEffect Removes edge from state; closes context menu
      */
     const deleteEdge = (id: string) => {
         setEdges(prev => prev.filter(e => e.id !== id));
@@ -430,7 +574,125 @@ function EditorCanvas({ selectedScript }: ScriptEditorProps) {
     };
 
     /**
-     * Handles closing context menus when clicking outside or pressing Escape
+     * Initializes graph state when script selection changes
+     *
+     * Loads persisted graph data from script object or creates default graph with
+     * mandatory Start node when creating new script. Prevents auto-save during
+     * initial load to avoid redundant network requests.
+     *
+     * @effect
+     * @dependency {Scripts | null} selectedScript - Active script context
+     */
+    useEffect(() => {
+        if (selectedScript) {
+            // @ts-ignore
+            const graph = selectedScript.graphs?.[0];
+            let initialNodes: FlowNode[] = [];
+            let initialEdges: FlowEdge[] = [];
+
+            if (graph && graph.nodes) {
+                // @ts-ignore
+                initialNodes = graph.nodes as FlowNode[];
+            } else {
+                initialNodes = [
+                    {
+                        id: "1",
+                        type: "Start",
+                        data: {},
+                        position: { x: 300, y: 50 },
+                        deletable: false,
+                        selectable: false,
+                    },
+                ];
+            }
+
+            if (graph && graph.edges) {
+                // @ts-ignore
+                initialEdges = graph.edges as FlowEdge[];
+            }
+
+            setNodes(initialNodes);
+            setEdges(initialEdges);
+            lastSavedGraph.current = { nodes: initialNodes, edges: initialEdges };
+
+            // Mark initial load as done after a short delay
+            const timer = setTimeout(() => {
+                initialLoadDone.current = true;
+            }, 500);
+
+            return () => clearTimeout(timer);
+        } else {
+            // Clear nodes and edges if no script is selected
+            setNodes([]);
+            setEdges([]);
+            initialLoadDone.current = false;
+            lastSavedGraph.current = null;
+        }
+    }, [selectedScript, setNodes, setEdges]);
+
+    /**
+     * Implements debounced auto-save on graph changes
+     *
+     * Waits 1.5 seconds after last change before triggering save operation to
+     * prevent excessive network requests during active editing sessions. Skips
+     * save during initial graph load phase to avoid redundant persistence.
+     *
+     * @effect
+     * @dependency {FlowNode[]} nodes - Current node state
+     * @dependency {FlowEdge[]} edges - Current edge state
+     */
+    useEffect(() => {
+        if (!initialLoadDone.current) return;
+
+        if (saveTimeout.current) {
+            clearTimeout(saveTimeout.current);
+        }
+
+        saveTimeout.current = setTimeout(() => saveAction.current?.(), 1500);
+
+        return () => {
+            if (saveTimeout.current) {
+                clearTimeout(saveTimeout.current);
+            }
+        };
+    }, [nodes, edges]);
+
+    /**
+     * Ensures graph persistence during navigation/unload events
+     *
+     * Registers beforeunload handler to trigger immediate save when user navigates
+     * away from page. Uses sendBeacon via saveAction ref to guarantee delivery even
+     * during page transition. Also triggers final save on component unmount.
+     *
+     * @effect
+     * @cleanup Clears save timeout and triggers final save on unmount
+     */
+    useEffect(() => {
+        const handleBeforeUnload = () => {
+            saveAction.current?.(true);
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+            if (saveTimeout.current) {
+                clearTimeout(saveTimeout.current);
+            }
+            saveAction.current?.();
+        };
+    }, []);
+
+    /**
+     * Manages context menu dismissal on outside clicks or Escape key
+     *
+     * Listens for mousedown events outside menu containers and Escape key presses
+     * to provide intuitive menu dismissal behavior matching native OS patterns.
+     *
+     * @effect
+     * @dependency {(NodePickerMenu | NodeContextMenu | EdgeContextMenu | null)} nodePickerMenu - Menu visibility state
+     * @dependency {(NodePickerMenu | NodeContextMenu | EdgeContextMenu | null)} nodeContextMenu - Menu visibility state
+     * @dependency {(NodePickerMenu | NodeContextMenu | EdgeContextMenu | null)} edgeContextMenu - Menu visibility state
      */
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
@@ -544,54 +806,39 @@ function EditorCanvas({ selectedScript }: ScriptEditorProps) {
 }
 
 /**
- * ScriptEditor component provides a visual interface for editing scripts
+ * ScriptEditor component provides a visual interface for editing Luau scripts
  *
- * This component provides:
- * - Visual canvas for script node editing using React Flow
- * - Interactive node-based editing environment
- * - Navigation controls and visual aids (minimap, grid background)
- * - Responsive layout that adapts to different screen sizes
- * - Clear empty state when no script is selected
- * - Card-based UI consistent with the application design system
+ * Wrapper component that provides consistent card-based UI container around the
+ * core EditorCanvas. Handles empty state display when no script is selected and
+ * provides contextual header showing currently edited script name.
  *
- * The component automatically:
- * - Displays the selected script's name in the header
- * - Renders the React Flow editor when a script is selected
- * - Shows a helpful empty state message when no script is selected
- * - Provides navigation controls (zoom, pan) through React Flow
- * - Includes a minimap for easier navigation of large node graphs
- * - Displays a background grid for better node positioning
+ * Features:
+ * - Card-based layout matching application design system
+ * - Contextual header displaying active script name
+ * - Empty state messaging when no script selected
+ * - Full viewport height utilization with proper overflow handling
+ * - React Flow provider context initialization
+ *
+ * Integration notes:
+ * - Must be wrapped in ReactFlowProvider (handled internally)
+ * - Requires Scripts model object from backend API for persistence
+ * - Works with ScriptList component for script selection workflow
+ * - Persists graph state automatically via EditorCanvas internals
  *
  * @component
  * @param {ScriptEditorProps} props - Component properties
+ * @param {Scripts | null} props.selectedScript - Currently active script context
  *
  * @example
- * // Basic usage in a project editor layout
+ * // Basic integration in script editing workflow
  * <div className="flex h-screen">
- *   <ScriptList
- *     scripts={scripts}
- *     selectedScript={selectedScript}
- *     onSelectScript={setSelectedScript}
- *     onCreateScript={handleCreateScript}
- *     onRenameScript={handleRenameScript}
- *     onDeleteScript={handleDeleteScript}
- *   />
- *   <ScriptEditor selectedScript={selectedScript} />
+ *   <ScriptList scripts={scripts} selectedScript={selected} onSelect={setSelected} />
+ *   <ScriptEditor selectedScript={selected} />
  * </div>
  *
  * @example
- * // With minimal setup for a simple implementation
+ * // Standalone usage with minimal setup
  * <ScriptEditor selectedScript={currentScript} />
- *
- * @example
- * // In a responsive dashboard layout
- * <div className="min-h-screen bg-background">
- *   <DashboardHeader />
- *   <div className="flex h-[calc(100vh-64px)]">
- *     <ScriptList scripts={scripts} ... />
- *     <ScriptEditor selectedScript={selectedScript} />
- *   </div>
- * </div>
  */
 export function ScriptEditor({ selectedScript }: ScriptEditorProps) {
     return (
