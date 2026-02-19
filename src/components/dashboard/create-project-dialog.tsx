@@ -5,17 +5,18 @@ import { JSX, useEffect, useState } from "react";
 import { ProjectsModel as Projects } from "@/generated/models";
 import { useRouter } from "next/navigation";
 import {
-    Dialog,
-    DialogClose,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from "@/components/ui/dialog";
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
 import { Field, FieldGroup } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label";
 import { ReactNode } from "react";
 
@@ -128,6 +129,8 @@ export function CreateProjectDialog({
     const setOpen = onOpenChange ?? setInternalOpen;
 
     const [projectName, setProjectName] = useState(initialName);
+    const [projectDescription, setProjectDescription] = useState("");
+
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const router = useRouter();
@@ -193,15 +196,15 @@ export function CreateProjectDialog({
     }
 
     const dialogContent = (
-        <DialogContent className="sm:max-w-130 p-5">
-            <DialogHeader>
-                <DialogTitle className="text-lg">Create New Project</DialogTitle>
-                <DialogDescription className="text-sm text-muted-foreground">
-                    Enter a name for your new project. You can always change it later.
-                </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleProjectCreation}>
-                <FieldGroup>
+        <DrawerContent className="p-3">
+            <DrawerHeader>
+                <DrawerTitle className="text-lg">Create New Project</DrawerTitle>
+                <DrawerDescription className="text-sm text-muted-foreground">
+                    Fill all the fields below to create a new project.
+                </DrawerDescription>
+            </DrawerHeader>
+            <form onSubmit={handleProjectCreation} className="p-4">
+                <FieldGroup className="gap-5">
                     <Field>
                         <Label htmlFor="project-name">Project Name</Label>
                         <Input
@@ -221,17 +224,22 @@ export function CreateProjectDialog({
                             </p>
                         )}
                     </Field>
+                    <Field>
+                        <Label htmlFor="project-description">Project Description</Label>
+                        <Textarea
+                            id="project-description"
+                            placeholder="Type your message here."
+                            className="p-2 mt-1"
+                            value={projectDescription}
+                            onChange={(e) => setProjectDescription(e.target.value)}
+                        />
+                    </Field>
                 </FieldGroup>
-                <DialogFooter className="mt-6">
-                    <DialogClose asChild>
-                        <Button variant="outline" type="button" disabled={submitting} className="cursor-pointer">
-                            Cancel
-                        </Button>
-                    </DialogClose>
+                <DrawerFooter className="mt-6 p-0">
                     <Button
                         type="submit"
                         disabled={submitting || !projectName.trim()}
-                        className="cursor-pointer"
+                        className="cursor-pointer p-4"
                     >
                         {submitting ? (
                             <span className="flex items-center">
@@ -240,25 +248,30 @@ export function CreateProjectDialog({
                             </span>
                         ) : "Create Project"}
                     </Button>
-                </DialogFooter>
+                    <DrawerClose asChild>
+                        <Button variant="outline" type="button" disabled={submitting} className="cursor-pointer p-4">
+                            Cancel
+                        </Button>
+                    </DrawerClose>
+                </DrawerFooter>
             </form>
-        </DialogContent>
+        </DrawerContent>
     );
 
     // If trigger is provided, wrap with Dialog and DialogTrigger
     if (trigger) {
         return (
-            <Dialog open={isOpen} onOpenChange={setOpen}>
-                <DialogTrigger asChild>{trigger}</DialogTrigger>
+            <Drawer direction="right" open={isOpen} onOpenChange={setOpen}>
+                <DrawerTrigger asChild>{trigger}</DrawerTrigger>
                 {dialogContent}
-            </Dialog>
+            </Drawer>
         );
     }
 
     // Otherwise, just render the dialog content (to be used with external DialogTrigger)
     return (
-        <Dialog open={isOpen} onOpenChange={setOpen}>
+        <Drawer direction="right" open={isOpen} onOpenChange={setOpen}>
             {dialogContent}
-        </Dialog>
+        </Drawer>
     );
 }

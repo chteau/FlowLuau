@@ -316,10 +316,6 @@ export function ProjectItem({ project }: { project: Project }) {
                     <Calendar className="h-3 w-3" />
                     {formatRelativeTime(project.updatedAt)}
                 </div>
-                <div className="flex items-center gap-1">
-                    <Network className="h-3 w-3" />
-                    {0} nodes
-                </div>
             </CardFooter>
 
             <ProjectDeleteConfirmationDialog
