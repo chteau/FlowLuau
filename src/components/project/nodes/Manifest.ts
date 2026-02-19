@@ -32,9 +32,15 @@ import TableNode from "./Available/BasicTypes/Table";
 
 import IfElseNode from "./Available/ControlFlow/IfElse";
 import ConditionNode from "./Available/ControlFlow/Condition";
+import RepeatUntilLoopNode from "./Available/ControlFlow/RepeatUntil";
+import WhileLoopNode from "./Available/ControlFlow/WhileLoop";
+import ForLoopNode from "./Available/ControlFlow/ForLoop";
+import BreakStatementNode from "./Available/ControlFlow/Break";
+import ContinueStatementNode from "./Available/ControlFlow/Continue";
+import ReturnStatementNode from "./Available/ControlFlow/Return";
 
-import VariableGetNode from "./Available/Variables/GetVariable";
-import VariableSetNode from "./Available/Variables/SetVariable";
+import VariableGetNode from "./Available/Variables/VariableGet";
+import VariableSetNode from "./Available/Variables/VariableSet";
 
 import AddNode from "./Available/Arithmetic/Add";
 import SubtractNode from "./Available/Arithmetic/Subtract";
@@ -63,6 +69,12 @@ export const nodeTypes = {
     // Control Flow Nodes
     IfElse: IfElseNode,
     Condition: ConditionNode,
+    RepeatUntilLoop: RepeatUntilLoopNode,
+    WhileLoop: WhileLoopNode,
+    ForLoop: ForLoopNode,
+    BreakStatement: BreakStatementNode,
+    ContinueStatement: ContinueStatementNode,
+    ReturnStatement: ReturnStatementNode,
 
     // Variables Nodes
     VariableGet: VariableGetNode,
