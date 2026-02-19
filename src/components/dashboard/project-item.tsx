@@ -1,9 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import {
+    MoreHorizontal,
+    ExternalLink,
+    Settings,
+    Trash2,
+    Calendar,
+} from "lucide-react";
+import { getRobloxGameThumbnails } from "@/app/actions/roblox";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { useRouter } from "next/navigation";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -12,38 +21,40 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ProjectDeleteConfirmationDialog } from "@/components/project/project-delete-confirmation-dialog";
-import {
-    MoreHorizontal,
-    ExternalLink,
-    Settings,
-    Trash2,
-    Calendar,
-    Network,
-} from "lucide-react";
-import { Card, CardFooter, CardHeader, CardTitle } from "../ui/card";
-import Link from "next/link";
+import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
 /**
  * Represents a user project entity in the visual scripting application
  *
  * Projects serve as top-level containers for scripts, variables, and other resources.
- * Each project maintains metadata about its creation, modification history, and ownership.
- * Date fields may be provided as ISO 8601 strings from API responses or Date objects
- * in client-side state, requiring robust handling in display logic.
+ * Each project maintains metadata about its creation, modification history, ownership,
+ * and optional Roblox universe integration for game development workflows.
  *
  * @interface Project
  * @property {string} id - Globally unique identifier (UUID) for project persistence and routing
  * @property {string} name - User-defined display name for the project (e.g., "Player Controller")
+ * @property {string} description - Optional descriptive text explaining project purpose or scope
  * @property {string | Date} createdAt - Timestamp of project creation (ISO string from API or Date object)
  * @property {string | Date} updatedAt - Timestamp of last modification (ISO string from API or Date object)
  * @property {string} userId - Identifier of the authenticated user who owns this project
+ * @property {string | null} robloxUniverseId - Optional Roblox universe identifier for game integration
+ *   When present, enables thumbnail fetching and Roblox-specific tooling features
+ * @property {Object} color - Visual theming configuration for project representation
+ * @property {string} color.text - Tailwind CSS class for text coloring (e.g., "text-blue-400")
+ * @property {string} color.background - Tailwind CSS class for background coloring (e.g., "bg-blue-400")
  */
 export interface Project {
     id: string;
     name: string;
+    description: string;
     createdAt: string | Date;
     updatedAt: string | Date;
     userId: string;
+    robloxUniverseId: string | null;
+    color: {
+        text: string;
+        background: string;
+    };
 }
 
 /**
@@ -125,17 +136,26 @@ export function formatRelativeTime(dateInput: string | Date): string {
  * ProjectItem component renders a single project as an interactive card in the dashboard
  *
  * Provides a visual entry point to project management with intuitive navigation and
- * contextual actions. Features a letter-based avatar derived from project name, relative
- * time display for last modification, and node count metrics. Entire card surface is
- * clickable for primary navigation while preserving access to secondary actions via dropdown.
+ * contextual actions. Features a letter-based avatar derived from project name, optional
+ * Roblox game thumbnail background, relative time display for last modification, and
+ * description preview. Entire card surface is clickable for primary navigation while
+ * preserving access to secondary actions via dropdown menu.
  *
  * Visual design characteristics:
- * - Letter avatar using first character of project name with contextual background
+ * - Letter avatar using first character of project name with customizable color theming
+ * - Optional Roblox game thumbnail as background image (fades in on load)
  * - Subtle hover transitions on border and background for tactile feedback
  * - Absolute-positioned overlay link for full-card click navigation
  * - Dropdown menu with contextual actions (open, settings, delete)
- * - Compact footer displaying last modified time and node count metrics
+ * - Compact footer displaying last modified time
+ * - Description text with line clamping for multi-line preview
  * - Responsive layout adapting to container constraints
+ *
+ * Roblox integration:
+ * - Automatically fetches game thumbnail when robloxUniverseId is present
+ * - Thumbnail displayed as background image with letter avatar overlay
+ * - Fallback to solid color avatar when thumbnail unavailable or not configured
+ * - Optimistic loading with opacity transition for smooth visual experience
  *
  * Interaction patterns:
  * - Primary action: Click anywhere on card navigates to project editor (/project/{id})
@@ -146,13 +166,14 @@ export function formatRelativeTime(dateInput: string | Date): string {
  * Data integration:
  * - Accepts Project interface with robust date handling (string/Date)
  * - Displays relative time using formatRelativeTime utility
- * - Node count currently hardcoded to 0 (pending graph analysis implementation)
+ * - Color theming applied via project.color.text and project.color.background
  * - Relies on parent component for project list state management
  *
  * Security considerations:
  * - Delete operation requires explicit confirmation dialog
  * - Navigation restricted to authenticated user's own projects (enforced server-side)
  * - No sensitive data exposed in client-side rendering
+ * - Thumbnail fetching occurs client-side to avoid server bandwidth usage
  *
  * @component
  * @param {Object} props - Component properties
@@ -167,11 +188,14 @@ export function formatRelativeTime(dateInput: string | Date): string {
  * </div>
  *
  * @example
- * // Integration with project management context
+ * // Integration with Roblox game project
  * <ProjectItem
  *   project={{
- *     id: "proj_a1b2c3",
- *     name: "Character Controller",
+ *     id: "proj_roblox123",
+ *     name: "Obstacle Course",
+ *     description: "Parkour game with checkpoints and leaderboards",
+ *     robloxUniverseId: "987654321",
+ *     color: { text: "text-blue-400", background: "bg-blue-400" },
  *     createdAt: "2026-02-15T08:22:17Z",
  *     updatedAt: new Date(),
  *     userId: "user_xyz789"
@@ -182,6 +206,7 @@ export function ProjectItem({ project }: { project: Project }) {
     const router = useRouter();
     const [isProjectDeleteDialogOpen, setProjectDeleteDialogOpen] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [gameThumbnail, setGameThumbnail] = useState<string | null>(null);
 
     /**
      * Navigates to the project editor interface for script authoring
@@ -201,7 +226,8 @@ export function ProjectItem({ project }: { project: Project }) {
      * Navigates to project configuration settings interface
      *
      * Opens project-specific settings page for metadata management, permissions,
-     * and advanced configuration options. Accessed exclusively through dropdown menu.
+     * Roblox integration configuration, and advanced options. Accessed exclusively
+     * through dropdown menu to prevent accidental navigation.
      *
      * @returns {void}
      * @sideEffect Updates browser URL and renders ProjectSettingsPage component
@@ -218,7 +244,8 @@ export function ProjectItem({ project }: { project: Project }) {
      * On failure, displays error state and closes confirmation dialog.
      *
      * Security note: Server enforces ownership validation - clients cannot delete
-     * projects they don't own regardless of frontend actions.
+     * projects they don't own regardless of frontend actions. Backend middleware
+     * verifies user identity and project ownership before processing deletion.
      *
      * @async
      * @returns {Promise<void>}
@@ -245,6 +272,34 @@ export function ProjectItem({ project }: { project: Project }) {
         }
     };
 
+    /**
+     * Fetches Roblox game thumbnail when project has associated universe ID
+     *
+     * Executes server action to retrieve thumbnail metadata from Roblox API.
+     * Updates local state with thumbnail URL for background image display.
+     * Handles errors gracefully without disrupting main component functionality.
+     *
+     * Optimization:
+     * - Only executes when robloxUniverseId is present (prevents unnecessary requests)
+     * - Uses server action for proper request handling and potential caching
+     * - Sets thumbnail URL directly to state for immediate visual feedback
+     *
+     * @effect
+     * @dependency {string | null} project.robloxUniverseId - Roblox universe identifier
+     */
+    useEffect(() => {
+        (async () => {
+            if (!project.robloxUniverseId) return;
+
+            try {
+                const data = await getRobloxGameThumbnails(project.robloxUniverseId);
+                if (data) setGameThumbnail(data.thumbnails[0]?.imageUrl || null);
+            } catch (err) {
+                console.warn(err);
+            }
+        })();
+    }, [project.robloxUniverseId]);
+
     return (
         <Card className={cn(
             "flex flex-col justify-between rounded-md border border-border",
@@ -256,8 +311,22 @@ export function ProjectItem({ project }: { project: Project }) {
                 href={`/project/${project.id}`}
                 className="absolute top-0 left-0 size-full z-10 cursor-pointer"
             />
-            <div className="size-full min-h-30 bg-muted/30 p-4 relative overflow-hidden flex">
-                <div className={`w-12 h-12 bg-secondary text-secondary-foreground rounded-lg flex items-center justify-center font-bold text-lg relative z-10 shadow-sm`}>
+            <div className="size-full min-h-40 bg-muted/30 p-4 relative overflow-hidden flex">
+                <img
+                    src={gameThumbnail || undefined}
+                    className={cn(
+                        "absolute top-0 left-0 size-full transition-opacity duration-300 object-cover",
+                        gameThumbnail ? "opacity-100" : "opacity-0",
+                    )}
+                    loading={"eager"}
+                    alt=""
+                />
+
+                <div className={cn(
+                    "w-12 h-12 rounded-lg flex items-center justify-center font-bold text-lg relative z-10 shadow-sm backdrop-blur",
+                    project.color.text || "text-secondary-foreground",
+                    project.color.background || "bg-secondary",
+                )}>
                     {project.name.charAt(0)}
                 </div>
 
@@ -267,7 +336,7 @@ export function ProjectItem({ project }: { project: Project }) {
                             <Button
                                 variant="ghost"
                                 size="icon-sm"
-                                className="text-muted-foreground transition-opacity hover:text-foreground p-4 cursor-pointer"
+                                className="bg-background/50 hover:text-foreground p-4 cursor-pointer transition-all"
                             >
                                 <MoreHorizontal className="size-4" />
                                 <span className="sr-only">Project options</span>
@@ -304,10 +373,15 @@ export function ProjectItem({ project }: { project: Project }) {
             </div>
 
             <CardHeader className="space-y-2">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col justify-center gap-1">
                     <CardTitle className="text-lg font-semibold truncate max-w-full">
                         {project.name}
                     </CardTitle>
+                    {project.description && (
+                        <CardDescription className="text-muted-foreground truncate overflow-hidden text-ellipsis max-w-full line-clamp-2">
+                            {project.description}
+                        </CardDescription>
+                    )}
                 </div>
             </CardHeader>
 
