@@ -46,12 +46,20 @@ export async function POST(req: Request) {
             return unauthorizedResponse();
         }
 
-        const { name } = await validateProjectCreationRequest(req);
+        const {
+            name,
+            description,
+            universeId,
+            color,
+        } = await validateProjectCreationRequest(req);
 
         const project = await prisma.projects.create({
             data: {
                 id: crypto.randomUUID(),
                 name,
+                description,
+                robloxUniverseId: universeId,
+                color,
                 userId: session.user.id,
             },
         });
@@ -88,6 +96,7 @@ class InputValidationError extends Error {
  */
 async function validateProjectCreationRequest(req: Request) {
     const body = await req.json();
+    let gameUniverseId: string | null = null;
 
     // Handle empty body case
     if (typeof body !== "object" || body === null) {
@@ -105,7 +114,69 @@ async function validateProjectCreationRequest(req: Request) {
         }
     }
 
-    return { name: body.name || "New Project" };
+    // Validate description if provided
+    if ("description" in body && body.description.trim()) {
+        if (typeof body.description !== "string") {
+            throw new InputValidationError("Project description must be a string");
+        }
+    }
+
+    // Validate roblox game link
+    if ("robloxGameURL" in body && body.robloxGameURL.trim()) {
+        if (typeof body.robloxGameURL !== "string") {
+            throw new InputValidationError("Roblox game URL must be a string");
+        }
+
+        const extractRobloxGameId = (url: string): number | null => {
+            const match = url.match(/\/games\/(\d+)/);
+            return match ? Number(match[1]) : null;
+        };
+
+        const gameId = extractRobloxGameId(body.robloxGameURL);
+        if (!gameId) {
+            throw new InputValidationError("Invalid Roblox game URL");
+        }
+
+        try {
+            const gameResponse = await fetch(
+                `https://apis.roblox.com/universes/v1/places/${gameId}/universe`
+            );
+
+            if (!gameResponse.ok) {
+                "Roblox game not found";
+            } else {
+                const gameData = await gameResponse.json();
+                if (!gameData.universeId) {
+                    throw new InputValidationError("Roblox game not found");
+                }
+
+                gameUniverseId = gameData.universeId.toString();
+            }
+        } catch {
+            throw new InputValidationError("Couldn't fetch Roblox game data");
+        }
+    }
+
+    // Validate color if provided
+    if ("color" in body) {
+        if (typeof body.color !== "object") {
+            throw new InputValidationError("Project color must be an object");
+        }
+
+        if (!body.color.background || !body.color.text) {
+            throw new InputValidationError("Project color must have background and text properties");
+        }
+    }
+
+    return {
+        name: body.name || "New Project",
+        description: body.description || "",
+        universeId: gameUniverseId || "",
+        color: body.color || {
+            text: "text-secondary-foreground",
+            background: "bg-secondary",
+        },
+    };
 }
 
 /**
