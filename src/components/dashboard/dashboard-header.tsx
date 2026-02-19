@@ -45,12 +45,9 @@ export function DashboardHeader() {
     const router = useRouter();
 
     return (
-        <header className="flex items-center justify-between border-b border-border bg-card/30 backdrop-blur px-6 py-4 z-10">
+        <header className="flex items-center justify-between border-b border-border bg-background px-6 py-4 z-10">
             <div>
                 <h1 className="text-xl font-semibold tracking-tight text-foreground">Projects</h1>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                    Manage and compile your visual logic nodes to Roblox Luau.
-                </p>
             </div>
             <div className="flex items-center gap-3">
                 <CreateProjectDialog

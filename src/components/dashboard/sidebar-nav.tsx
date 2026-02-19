@@ -78,7 +78,7 @@ export function SidebarNav() {
     // Handle loading and error states
     if (me.isPending) {
         return (
-            <aside className="flex h-screen w-64 flex-col border-r border-border bg-sidebar/50 backdrop-blur z-10">
+            <aside className="flex h-screen w-64 flex-col border-r border-border bg-sidebar z-10">
                 <div className="p-3 border-b border-sidebar-border">
                     <div className="flex items-center gap-3 px-2 py-2">
                         <div className="w-7 h-7 rounded-md bg-muted animate-pulse" />
@@ -106,7 +106,7 @@ export function SidebarNav() {
 
     if (me.error || !me.data) {
         return (
-            <aside className="flex h-screen w-64 flex-col border-r border-border bg-sidebar/50 backdrop-blur z-10">
+            <aside className="flex h-screen w-64 flex-col border-r border-border bg-background z-10">
                 <div className="p-3 border-b border-sidebar-border">
                     <div className="text-destructive text-sm p-2">
                         Error loading sidebar
@@ -119,7 +119,7 @@ export function SidebarNav() {
     }
 
     return (
-        <aside className="flex h-screen w-64 flex-col border-r border-border bg-sidebar/50 backdrop-blur z-10">
+        <aside className="flex h-screen w-64 flex-col border-r border-border bg-background z-10">
             {/* User section */}
             <div className="border-sidebar-border" aria-label="User profile">
                 <button
