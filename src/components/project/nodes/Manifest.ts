@@ -41,12 +41,16 @@ import ReturnStatementNode from "./Available/ControlFlow/Return";
 
 import VariableGetNode from "./Available/Variables/VariableGet";
 import VariableSetNode from "./Available/Variables/VariableSet";
+import FunctionDefinitionNode from "./Available/Functions/FunctionDefinition";
+import FunctionCallNode from "./Available/Functions/FunctionCall";
 
 import AddNode from "./Available/Arithmetic/Add";
 import SubtractNode from "./Available/Arithmetic/Subtract";
 import MultiplyNode from "./Available/Arithmetic/Multiply";
 import DivideNode from "./Available/Arithmetic/Divide";
 import ModulusNode from "./Available/Arithmetic/Modulus";
+
+import PrintNode from "./Available/SideEffects/Print";
 
 /**
  * Consolidated node types registry
@@ -76,9 +80,11 @@ export const nodeTypes = {
     ContinueStatement: ContinueStatementNode,
     ReturnStatement: ReturnStatementNode,
 
-    // Variables Nodes
+    // Variables & Functions Nodes
     VariableGet: VariableGetNode,
     VariableSet: VariableSetNode,
+    FunctionDefinition: FunctionDefinitionNode,
+    FunctionCall: FunctionCallNode,
 
     // Arithmetic Nodes
     Add: AddNode,
@@ -86,4 +92,7 @@ export const nodeTypes = {
     Multiply: MultiplyNode,
     Divide: DivideNode,
     Modulus: ModulusNode,
+
+    // Side Effects Nodes
+    Print: PrintNode,
 };

@@ -273,6 +273,7 @@ function EditorCanvas({ selectedScript }: ScriptEditorProps) {
         ) {
             const newEdge: FlowEdge = {
                 id: `edge-${connection.source}-${connection.target}-${Date.now()}`,
+                type: "step",
                 ...connection,
                 data: {
                     sourceType: sourceHandleType,
@@ -522,6 +523,7 @@ function EditorCanvas({ selectedScript }: ScriptEditorProps) {
         if (targetHandleDef) {
             const newEdge: FlowEdge = {
                 id: `${sourceNodeId}-${newNodeId}`,
+                type: "step",
                 source: sourceHandleType === "source" ? sourceNodeId : newNodeId,
                 sourceHandle: sourceHandleType === "source"
                     ? sourceHandleId ?? undefined

@@ -10,7 +10,7 @@ import React, {
     forwardRef,
     useImperativeHandle,
 } from "react";
-import { useVariableStore, Variable } from "@/stores/variable-store";
+import { useIntellisenseStore, Variable } from "@/stores/intellisense-store";
 import { useShallow } from "zustand/shallow";
 import { LuauType } from "@/types/luau";
 import { cn } from "@/lib/utils";
@@ -181,7 +181,7 @@ const VariableAutocomplete = forwardRef<
          * @returns {Variable[]} Array of variable definitions for current script scope
          * @dependency {string} scriptId - Current script identifier for registry lookup
          */
-        const variables = useVariableStore(
+        const variables = useIntellisenseStore(
             useShallow((s) => s.getVariablesForScript(scriptId))
         );
 

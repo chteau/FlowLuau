@@ -1,123 +1,45 @@
 "use client";
 
-import React, { memo, useCallback, useState } from "react";
+import { memo, useCallback, useState } from "react";
 import { NodeProps, useNodeId, useReactFlow } from "@xyflow/react";
 import NodeTemplate from "../../Template";
-import { AlertTriangle, Divide } from "lucide-react";
+import { Divide, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { LuauType } from "@/types/luau";
 
-/**
- * Data structure for the DivideNode component
- *
- * Defines configuration options for arithmetic division operations
- * with two operational modes: linear (fixed inputs) and expression-based.
- *
- * @interface
- * @property {("linear" | "expression")} [mode] - Operation mode selection
- * @property {string} [expression] - Custom Luau arithmetic expression when in expression mode
- */
 export interface DivideNodeData {
     mode?: "linear" | "expression";
     expression?: string;
 }
 
-/**
- * Props type for DivideNode component
- *
- * Extends React Flow's NodeProps with optional DivideNodeData properties
- * to support dynamic node configuration within the visual scripting interface.
- *
- * @typedef {NodeProps & Partial<DivideNodeData>} DivideNodeProps
- */
-export type DivideNodeProps = NodeProps & Partial<DivideNodeData>;
+export type DivideNodeProps = NodeProps & { data: DivideNodeData };
 
 /**
- * DivideNode component performs arithmetic division operations in visual scripts
- *
- * Supports two operational modes:
- * 1. Linear mode: Divides two explicit numeric inputs (A / B) via dedicated handles
- * 2. Expression mode: Evaluates a custom Luau arithmetic expression (e.g., "total / count")
- *
- * Features:
- * - Real-time expression validation with visual feedback
- * - Seamless mode switching without data loss
- * - Persistent state synchronization with React Flow's node system
- * - Color-coded visual indicators for valid/invalid states
- * - Type-safe input/output handles based on current mode
- * - Warning icon display for invalid expressions in expression mode
- *
- * The node outputs a single numeric result representing the division operation outcome.
- * Note: Runtime division-by-zero errors are not validated at design time.
- *
- * @component
- * @param {DivideNodeProps} props - React Flow node properties and custom data
- *
- * @example
- * // Linear mode node (default)
- * const linearDivideNode = {
- *   id: 'divide-1',
- *   type: 'divide',
- *    { mode: 'linear' },
- *   position: { x: 100, y: 200 }
- * };
- *
- * @example
- * // Expression mode node
- * const expressionDivideNode = {
- *   id: 'divide-2',
- *   type: 'divide',
- *    {
- *     mode: 'expression',
- *     expression: 'totalScore / playerCount'
- *   },
- *   position: { x: 100, y: 200 }
- * };
+ * Division node that divides two numeric values.
+ * Linear mode exposes two Number inputs (A / B); expression mode evaluates a custom arithmetic expression.
+ * Outputs a single Number-typed result.
  */
 const DivideNode = memo(({ data, selected }: DivideNodeProps) => {
     const nodeId = useNodeId();
     const { setNodes } = useReactFlow();
 
-    const [mode, setMode] = useState<"linear" | "expression">(
-        (data?.mode as "linear" | "expression") || "linear"
-    );
-    const [expression, setExpression] = useState(data?.expression || "");
+    const [mode, setMode] = useState<"linear" | "expression">(data.mode ?? "linear");
+    const [expression, setExpression] = useState(data.expression ?? "");
     const [isValid, setIsValid] = useState(true);
 
-    /**
-     * Updates node data in React Flow's state management system
-     *
-     * Merges partial data updates into the node's existing data while preserving
-     * all other node properties. Ensures persistent state synchronization across
-     * the visual scripting interface.
-     *
-     * @param {Partial<DivideNodeData>} partial - Partial data object to merge into node data
-     * @returns {void}
-     */
     const updateData = useCallback(
         (partial: Partial<DivideNodeData>) => {
             setNodes((nodes) =>
-                nodes.map((node) =>
-                    node.id === nodeId
-                        ? { ...node, data: { ...node.data, ...partial } }
-                        : node
+                nodes.map((n) =>
+                    n.id === nodeId ? { ...n, data: { ...n.data, ...partial } } : n
                 )
             );
         },
         [nodeId, setNodes]
     );
 
-    /**
-     * Handles mode switching between linear and expression operation types
-     *
-     * Updates local state and persists the mode selection to React Flow's node data.
-     * Triggers immediate UI updates to reflect handle configuration changes.
-     *
-     * @param {("linear" | "expression")} newMode - Target operation mode
-     * @returns {void}
-     */
     const handleModeChange = useCallback(
         (newMode: "linear" | "expression") => {
             setMode(newMode);
@@ -126,27 +48,11 @@ const DivideNode = memo(({ data, selected }: DivideNodeProps) => {
         [updateData]
     );
 
-    /**
-     * Handles expression input changes with real-time validation
-     *
-     * Validates expressions against a permissive pattern allowing common arithmetic
-     * characters and operators. Provides immediate visual feedback for invalid syntax.
-     *
-     * Validation rules:
-     * - Empty expressions are considered valid (placeholder state)
-     * - Accepts alphanumeric characters, underscores, arithmetic operators (+-*%/),
-     *   parentheses, decimal points, commas, and whitespace
-     * - Does NOT validate semantic correctness (e.g., division by zero, balanced parentheses)
-     *
-     * @param {React.ChangeEvent<HTMLInputElement>} e - Input change event
-     * @returns {void}
-     */
     const handleExpressionChange = useCallback(
         (e: React.ChangeEvent<HTMLInputElement>) => {
             const expr = e.target.value;
             setExpression(expr);
             updateData({ expression: expr });
-
             const valid = expr.trim() === "" || /^[a-zA-Z0-9_+\-*/%().,\s]+$/.test(expr);
             setIsValid(valid);
         },
@@ -162,7 +68,7 @@ const DivideNode = memo(({ data, selected }: DivideNodeProps) => {
                     text: "text-green-400",
                     ring: "ring-green-400/40",
                 },
-                icon: mode === "linear" ? Divide : isValid ? Divide : AlertTriangle,
+                icon: mode === "expression" && !isValid ? AlertTriangle : Divide,
                 name: "Divide",
                 description:
                     mode === "linear"
@@ -205,13 +111,10 @@ const DivideNode = memo(({ data, selected }: DivideNodeProps) => {
                 {mode === "expression" && (
                     <div className="space-y-1">
                         <Input
-                            value={expression as string}
+                            value={expression}
                             onChange={handleExpressionChange}
                             placeholder="e.g., total / count"
-                            className={cn(
-                                "text-xs h-7 font-mono",
-                                !isValid && "border-destructive"
-                            )}
+                            className={cn("text-xs h-7 font-mono", !isValid && "border-destructive")}
                         />
                         {!isValid && (
                             <div className="text-[8px] text-destructive">
@@ -227,42 +130,15 @@ const DivideNode = memo(({ data, selected }: DivideNodeProps) => {
 
 DivideNode.displayName = "DivideNode";
 
-/**
- * Static method to compute dynamic handles based on node data configuration
- *
- * Used by the visual scripting system to determine available connection points
- * without mounting the full component. Enables efficient handle rendering and
- * connection validation during graph operations.
- *
- * @static
- * @param {DivideNodeData} data - Node configuration data
- * @returns {Object} Handle configuration with inputs and outputs arrays
- * @returns {Array} returns.inputs - Input handles (empty in expression mode)
- * @returns {Array} returns.outputs - Single numeric output handle
- *
- * @example
- * const handles = DivideNode.getHandles({ mode: 'linear' });
- * // {
- * //   inputs: [
- * //     { id: 'a', label: 'A', type: LuauType.Number },
- * //     { id: 'b', label: 'B', type: LuauType.Number }
- * //   ],
- * //   outputs: [{ id: 'result', label: 'Result', type: LuauType.Number }]
- * // }
- */
-(DivideNode as any).getHandles = (data: DivideNodeData) => {
-    const mode = data?.mode || "linear";
-
-    return {
-        inputs:
-            mode === "linear"
-                ? [
-                      { id: "a", label: "A", type: LuauType.Number },
-                      { id: "b", label: "B", type: LuauType.Number },
-                  ]
-                : [],
-        outputs: [{ id: "result", label: "Result", type: LuauType.Number }],
-    };
-};
+(DivideNode as any).getHandles = (data: DivideNodeData) => ({
+    inputs:
+        (data?.mode ?? "linear") === "linear"
+            ? [
+                  { id: "a", label: "A", type: LuauType.Number },
+                  { id: "b", label: "B", type: LuauType.Number },
+              ]
+            : [],
+    outputs: [{ id: "result", label: "Result", type: LuauType.Number }],
+});
 
 export default DivideNode;
