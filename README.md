@@ -1,8 +1,9 @@
 <br/>
 <div align="center">
     <a href="https://github.com/chteau/FlowLuau">
-        <img src="https://raw.githubusercontent.com/chteau/FlowLuau/refs/heads/master/public/README/Banner.png" alt="Banner">
+        <img src="https://raw.githubusercontent.com/chteau/FlowLuau/refs/heads/master/public/README/Banner.png" alt="Banner" width="500">
     </a>
+    <br>
     <br>
     <div align="center">
         <img src="https://img.shields.io/badge/Luau-3057FD?style=for-the-badge&logo=lua&logoColor=white" alt="Luau Badge" />
