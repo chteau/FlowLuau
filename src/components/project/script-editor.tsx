@@ -18,6 +18,7 @@ import {
     useReactFlow,
     ReactFlowProvider,
     FinalConnectionState,
+    BackgroundVariant,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
@@ -151,6 +152,10 @@ function EditorCanvas({ selectedScript }: ScriptEditorProps) {
     const initialLoadDone = useRef(false);
     const lastSavedGraph = useRef<{ nodes: FlowNode[]; edges: FlowEdge[] } | null>(null);
     const saveAction = useRef<((isUnloading?: boolean) => void) | undefined>(undefined);
+
+    const MENU_WIDTH = 320;
+    const MENU_HEIGHT = 400;
+    const PADDING = 16;
 
     const { screenToFlowPosition } = useReactFlow();
 
@@ -311,23 +316,24 @@ function EditorCanvas({ selectedScript }: ScriptEditorProps) {
     const onConnectEnd = useCallback((event: MouseEvent | TouchEvent, connectionState: FinalConnectionState) => {
         if (!connectStartRef.current || !ref.current) return;
 
-        const pane = ref.current.getBoundingClientRect();
         const { nodeId, handleId, handleType } = connectStartRef.current;
 
-        let clientX = 0;
-        let clientY = 0;
+        const pane = ref.current.getBoundingClientRect();
+        const clientX = 'clientX' in event ? event.clientX : 0;
+        const clientY = 'clientY' in event ? event.clientY : 0;
 
-        if (event instanceof MouseEvent) {
-            clientX = event.clientX;
-            clientY = event.clientY;
-        }
+        let x = clientX - pane.left;
+        let y = clientY - pane.top;
+
+        if (clientX + MENU_WIDTH > window.innerWidth) { x = window.innerWidth - pane.left - MENU_WIDTH - PADDING; }
+        if (clientY + MENU_HEIGHT > window.innerHeight) { y = window.innerHeight - pane.top - MENU_HEIGHT - PADDING; }
 
         if (nodeId && !connectionState.isValid) {
             setEdgeContextMenu(null);
             setNodeContextMenu(null);
             setNodePickerMenu({
-                x: clientX - pane.left,
-                y: clientY - pane.top,
+                x,
+                y,
                 sourceNodeId: nodeId,
                 sourceHandleId: handleId,
                 sourceHandleType: handleType || "source",
@@ -353,15 +359,20 @@ function EditorCanvas({ selectedScript }: ScriptEditorProps) {
         if (!ref.current) return;
 
         const pane = ref.current.getBoundingClientRect();
-
         const clientX = 'clientX' in event ? event.clientX : 0;
         const clientY = 'clientY' in event ? event.clientY : 0;
+
+        let x = clientX - pane.left;
+        let y = clientY - pane.top;
+
+        if (clientX + MENU_WIDTH > window.innerWidth) { x = window.innerWidth - pane.left - MENU_WIDTH - PADDING; }
+        if (clientY + MENU_HEIGHT > window.innerHeight) { y = window.innerHeight - pane.top - MENU_HEIGHT - PADDING; }
 
         setNodeContextMenu(null);
         setEdgeContextMenu(null);
         setNodePickerMenu({
-            x: clientX - pane.left,
-            y: clientY - pane.top,
+            x,
+            y,
             sourceNodeId: "",
             sourceHandleId: null,
             sourceHandleType: "source",
@@ -387,13 +398,21 @@ function EditorCanvas({ selectedScript }: ScriptEditorProps) {
         if (node.type === "Start") return;
 
         const pane = ref.current.getBoundingClientRect();
+        const clientX = 'clientX' in event ? event.clientX : 0;
+        const clientY = 'clientY' in event ? event.clientY : 0;
+
+        let x = clientX - pane.left;
+        let y = clientY - pane.top;
+
+        if (clientX + MENU_WIDTH > window.innerWidth) { x = window.innerWidth - pane.left - MENU_WIDTH - PADDING; }
+        if (clientY + MENU_HEIGHT > window.innerHeight) { y = window.innerHeight - pane.top - MENU_HEIGHT - PADDING; }
 
         setNodePickerMenu(null);
         setEdgeContextMenu(null);
         setNodeContextMenu({
+            x,
+            y,
             id: node.id,
-            x: event.clientX - pane.left,
-            y: event.clientY - pane.top,
         });
     }, []);
 
@@ -413,13 +432,21 @@ function EditorCanvas({ selectedScript }: ScriptEditorProps) {
         if (!ref.current) return;
 
         const pane = ref.current.getBoundingClientRect();
+        const clientX = 'clientX' in event ? event.clientX : 0;
+        const clientY = 'clientY' in event ? event.clientY : 0;
+
+        let x = clientX - pane.left;
+        let y = clientY - pane.top;
+
+        if (clientX + MENU_WIDTH > window.innerWidth) { x = window.innerWidth - pane.left - MENU_WIDTH - PADDING; }
+        if (clientY + MENU_HEIGHT > window.innerHeight) { y = window.innerHeight - pane.top - MENU_HEIGHT - PADDING; }
 
         setNodePickerMenu(null);
         setNodeContextMenu(null);
         setEdgeContextMenu({
+            x,
+            y,
             id: edge.id,
-            x: event.clientX - pane.left,
-            y: event.clientY - pane.top,
         });
     }, []);
 
@@ -751,7 +778,7 @@ function EditorCanvas({ selectedScript }: ScriptEditorProps) {
                 style={{ background: "var(--transparent)" }}
             >
                 <MiniMap />
-                <Background />
+                <Background bgColor="var(--background)" variant={BackgroundVariant.Lines} patternClassName="opacity-10" gap={30} />
                 <Controls showFitView showInteractive={false} />
             </ReactFlow>
 
@@ -853,7 +880,7 @@ export function ScriptEditor({ selectedScript }: ScriptEditorProps) {
     return (
         <main className="flex-1 w-full overflow-y-auto z-10">
             <Card className="h-full bg-transparent rounded-none border-0 shadow-none p-0 gap-0">
-                <CardHeader className="flex items-center justify-between border-b border-border bg-card/30 backdrop-blur px-6 py-4">
+                <CardHeader className="flex items-center justify-between border-b rounded-none border-border bg-card/30 backdrop-blur px-6 py-4">
                     <CardTitle>
                         {selectedScript ? `Editing: ${selectedScript.name}` : "Script Editor"}
                     </CardTitle>

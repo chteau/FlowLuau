@@ -29,13 +29,13 @@ function ProjectsListSkeleton() {
     return (
         <div className="w-full">
             <div className="grid gap-4 w-full grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-                {Array.from({ length: 8 }).map((_, index) => (
+                {Array.from({ length: 3 }).map((_, index) => (
                     <Card
                         key={index}
                         className={cn(
                             "flex flex-col justify-between rounded-md border border-border",
                             "bg-card/50 backdrop-blur group-hover:bg-accent/50 transition-colors",
-                            "min-w-md hover:border-foreground/20 group",
+                            "hover:border-foreground/20 group",
                             "z-10 p-0"
                         )}
                     >
@@ -129,7 +129,8 @@ export function ProjectsList() {
                     throw new Error("Failed to fetch projects");
                 }
                 const data = await response.json();
-                setProjects(data);
+                const validProjects = data.filter((project: any) => project.description !== null);
+                setProjects(validProjects);
             } catch (err) {
                 setError(err instanceof Error ? err.message : "An unknown error occurred");
             } finally {
@@ -183,7 +184,13 @@ export function ProjectsList() {
                 {projects.length > 0 && (
                     <div className="grid gap-4 w-full grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                         {projects.map((project) => (
-                            <ProjectItem key={project.id} project={project} />
+                            <ProjectItem
+                                key={project.id}
+                                project={{
+                                    ...project,
+                                    description: project.description ?? "",
+                                } as any}
+                            />
                         ))}
                     </div>
                 )}

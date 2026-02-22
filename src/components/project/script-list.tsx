@@ -81,11 +81,13 @@ export function ScriptList({
         <aside className="w-64 border-r border-border overflow-y-auto p-4 flex-col bg-background z-10">
             {/* Header section with title and create button */}
             <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold">Scripts</h2>
+                <h2 className="text-md font-bold ml-2">Scripts</h2>
                 <Button
+                    variant="ghost"
+                    size="lg"
                     onClick={onCreateScript}
                     aria-label="Create new script"
-                    className="p-4 bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer"
+                    className="text-primary-foreground cursor-pointer"
                 >
                     <Plus className="size-5" />
                 </Button>
@@ -107,8 +109,8 @@ export function ScriptList({
                         aria-selected={selectedScript?.id === script.id}
                     >
                         <div className="flex justify-between items-center">
-                            <span className="font-medium truncate max-w-[70%]">
-                                <ScrollText className="size-5 inline-block mr-4 opacity-50" />
+                            <span className="font-medium text-sm truncate max-w-[70%]">
+                                <ScrollText className="size-4 inline-block mr-4 opacity-50" />
                                 {script.name}
                             </span>
                             <div className="flex items-center space-x opacity-0 group-hover:opacity-100 transition-opacity">
@@ -143,7 +145,7 @@ export function ScriptList({
 
                 {/* Empty state handling */}
                 {scripts.length === 0 && (
-                    <div className="text-center py-8 text-muted-foreground">
+                    <div className="text-center text-sm py-8 text-muted-foreground">
                         No scripts yet
                     </div>
                 )}

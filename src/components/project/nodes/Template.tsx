@@ -218,7 +218,7 @@ export default function NodeTemplate({
         >
             {/* Node header with icon and name */}
             <div
-                className="bg-card/50 p-3 flex items-center gap-2 border-b border-border rounded-t-xl"
+                className="bg-card/50 p-3 flex items-center gap-2 border-b border-border rounded-t"
             >
                 <div
                     className={cn(
