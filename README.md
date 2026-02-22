@@ -1,8 +1,9 @@
 <br/>
 <div align="center">
     <a href="https://github.com/chteau/FlowLuau">
-        <img src="/public/README/banner.png" alt="Logo">
+        <img src="https://raw.githubusercontent.com/chteau/FlowLuau/refs/heads/master/public/README/Banner.png" alt="Banner">
     </a>
+    <br>
     <div align="center">
         <img src="https://img.shields.io/badge/Luau-3057FD?style=for-the-badge&logo=lua&logoColor=white" alt="Luau Badge" />
         <img src="https://img.shields.io/badge/React-%2320232a.svg?style=for-the-badge&logo=react&logoColor=white" alt="React Badge" />
@@ -13,7 +14,6 @@
     </p>
     <br/>
 </div>
-
 
 > This is still a work in progress and a lot of nodes are missing for now.
 
