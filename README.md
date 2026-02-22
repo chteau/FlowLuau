@@ -51,3 +51,15 @@ My goal with **FlowLuau** is to allow everyone to get into Roblox development. I
 
 ### Contributing
 If you would like to contribute and help me finish this project for the community please do! I'd be really happy as I'm also working on other things at the same time. Also quick disclaimer, I did use AI to generate some comments and infer types mainly as well. The current codebase (as of 02/22/2026) is pretty early and needs to be organized properly, which can be a bit of a pain in the *ss to navigate through. Be sure I'll clean all that soon. Cheers :)
+
+### License & Usage
+
+This project is licensed under the PolyForm Noncommercial License 1.0.0.
+
+    For Individuals & Non-Profits: You are free to study, modify, and self-host FlowLuau for personal projects, research, or educational purposes.
+
+    For Commercial Use: Any use intended for or directed toward commercial advantage or monetary compensation is strictly prohibited. This includes, but is not limited to, hosting FlowLuau as a paid service (SaaS) or using it for commercial game development consulting.
+
+    Note: As the author, I (Cheeteau) retain full rights to the software. If you are interested in using FlowLuau for commercial purposes, please reach out to discuss a commercial license.
+
+For the full legal text, please see the [LICENSE](https://github.com/chteau/FlowLuau/blob/main/LICENSE.md) file.
