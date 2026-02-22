@@ -62,4 +62,4 @@ This project is licensed under the PolyForm Noncommercial License 1.0.0.
 
     Note: As the author, I (Cheeteau) retain full rights to the software. If you are interested in using FlowLuau for commercial purposes, please reach out to discuss a commercial license.
 
-For the full legal text, please see the [LICENSE](https://github.com/chteau/FlowLuau/blob/main/LICENSE.md) file.
+For the full legal text, please see the [LICENSE](https://github.com/chteau/FlowLuau/blob/master/LICENSE.md) file.
