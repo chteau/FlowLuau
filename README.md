@@ -1,7 +1,7 @@
 <br/>
 <div align="center">
     <a href="https://github.com/chteau/FlowLuau">
-        <img src="public/README/banner.png" alt="Logo">
+        <img src="/public/README/banner.png" alt="Logo">
     </a>
     <div align="center">
         <img src="https://img.shields.io/badge/Luau-3057FD?style=for-the-badge&logo=lua&logoColor=white" alt="Luau Badge" />
