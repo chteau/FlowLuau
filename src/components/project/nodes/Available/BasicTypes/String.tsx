@@ -69,7 +69,7 @@ const StringNode = memo(({ data, selected }: StringNodeProps) => {
 
             const valid =
                 expr.trim() === "" ||
-                /^["'[\]a-zA-Z0-9_.\s%()+\-*/]+$/.test(expr);
+                /^((`[^`]*`)|("[^"]*")|('[^']*')|([a-zA-Z_][a-zA-Z0-9_.]*))(\s*\.\.\s*((`[^`]*`)|("[^"]*")|('[^']*')|([a-zA-Z_][a-zA-Z0-9_.]*)))*$/.test(expr);
             setIsValid(valid);
             setError(valid ? "" : "Invalid string expression");
         },
