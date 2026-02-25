@@ -52,6 +52,21 @@ import ModulusNode from "./Available/Arithmetic/Modulus";
 
 import PrintNode from "./Available/SideEffects/Print";
 
+import TableConcatNode from "./Available/Table/Concat";
+import TableForeachNode from "./Available/Table/Foreach";
+import TableInsertNode from "./Available/Table/Insert";
+import TableRemoveNode from "./Available/Table/Remove";
+import TableSortNode from "./Available/Table/Sort";
+import TablePackNode from "./Available/Table/Pack";
+import TableUnpackNode from "./Available/Table/Unpack";
+import TableMoveNode from "./Available/Table/Move";
+import TableCreateNode from "./Available/Table/Create";
+import TableFindNode from "./Available/Table/Find";
+import TableClearNode from "./Available/Table/Clear";
+import TableFreezeNode from "./Available/Table/Freeze";
+import TableIsFrozenNode from "./Available/Table/IsFrozen";
+import TableCloneNode from "./Available/Table/Clone";
+
 /**
  * Consolidated node types registry
  *
@@ -95,4 +110,20 @@ export const nodeTypes = {
 
     // Side Effects Nodes
     Print: PrintNode,
+
+    // Table standard library
+    TableConcat: TableConcatNode,
+    TableForeach: TableForeachNode,
+    TableInsert: TableInsertNode,
+    TableRemove: TableRemoveNode,
+    TableSort: TableSortNode,
+    TablePack: TablePackNode,
+    TableUnpack: TableUnpackNode,
+    TableMove: TableMoveNode,
+    TableCreate: TableCreateNode,
+    TableFind: TableFindNode,
+    TableClear: TableClearNode,
+    TableFreeze: TableFreezeNode,
+    TableIsFrozen: TableIsFrozenNode,
+    TableClone: TableCloneNode,
 };

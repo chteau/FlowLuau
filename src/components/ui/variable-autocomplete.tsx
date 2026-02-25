@@ -573,21 +573,32 @@ const VariableAutocomplete = forwardRef<
                                             variant="outline"
                                             className={cn(
                                                 "text-[10px] px-1.5 py-0.5",
-                                                variable.type === LuauType.Number &&
-                                                "text-blue-400 border-blue-400/30",
-                                                variable.type === LuauType.String &&
-                                                "text-amber-400 border-amber-400/30",
-                                                variable.type === LuauType.Boolean &&
-                                                "text-purple-400 border-purple-400/30",
-                                                variable.type === LuauType.Any &&
-                                                "text-muted-foreground border-muted"
+                                                variable.type === LuauType.Number && "text-blue-400 border-blue-400/30",
+                                                variable.type === LuauType.String && "text-amber-400 border-amber-400/30",
+                                                variable.type === LuauType.Boolean && "text-purple-400 border-purple-400/30",
+                                                variable.type === LuauType.Nil && "text-red-400 border-red-400/30",
+                                                variable.type === LuauType.Table && "text-green-400 border-green-400/30",
+                                                variable.type === LuauType.Function && "text-pink-400 border-pink-400/30",
+                                                variable.type === LuauType.Thread && "text-teal-400 border-teal-400/30",
+                                                variable.type === LuauType.UserData && "text-indigo-400 border-indigo-400/30",
+                                                variable.type === LuauType.Vector && "text-emerald-400 border-emerald-400/30",
+                                                variable.type === LuauType.Buffer && "text-cyan-400 border-cyan-400/30",
+                                                variable.type === LuauType.Flow && "text-rose-400 border-rose-400/30",
+                                                variable.type === LuauType.Any && "text-muted-foreground border-muted"
                                             )}
                                         >
                                             {variable.type === LuauType.Number && "Number"}
                                             {variable.type === LuauType.String && "String"}
                                             {variable.type === LuauType.Boolean && "Boolean"}
-                                            {variable.type === LuauType.Any && "Any"}
+                                            {variable.type === LuauType.Nil && "Nil"}
+                                            {variable.type === LuauType.Table && "Table"}
+                                            {variable.type === LuauType.Function && "Function"}
+                                            {variable.type === LuauType.Thread && "Thread"}
+                                            {variable.type === LuauType.UserData && "UserData"}
+                                            {variable.type === LuauType.Vector && "Vector"}
+                                            {variable.type === LuauType.Buffer && "Buffer"}
                                             {variable.type === LuauType.Flow && "Flow"}
+                                            {variable.type === LuauType.Any && "Any"}
                                         </Badge>
                                     </div>
                                 )}
