@@ -131,7 +131,10 @@ const FunctionDefinitionNode = memo(({ data, selected }: FunctionDefinitionNodeP
                 selected,
             }}
             inputs={[{ id: "prev", label: "Prev", type: LuauType.Flow }]}
-            outputs={[{ id: "next", label: "Next", type: LuauType.Flow }]}
+            outputs={[
+                { id: "body", label: "Body", type: LuauType.Flow },
+                { id: "next", label: "Next", type: LuauType.Flow }
+            ]}
         >
             <div className="space-y-3">
                 {/* Function name */}
@@ -226,7 +229,10 @@ FunctionDefinitionNode.displayName = "FunctionDefinitionNode";
 
 (FunctionDefinitionNode as any).getHandles = (_data: FunctionDefinitionNodeData) => ({
     inputs: [{ id: "prev", label: "Prev", type: LuauType.Flow }],
-    outputs: [{ id: "next", label: "Next", type: LuauType.Flow }],
+    outputs: [
+        { id: "body", label: "Body", type: LuauType.Flow },
+        { id: "next", label: "Next", type: LuauType.Flow }
+    ],
 });
 
 export default FunctionDefinitionNode;

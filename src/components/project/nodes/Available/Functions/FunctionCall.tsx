@@ -115,7 +115,7 @@ const FunctionCallNode = memo(({ data, selected }: FunctionCallNodeProps) => {
                 icon: isFunctionDeleted ? AlertTriangle : Play,
                 name: isFunctionDeleted ? "Function Deleted!" : "Call Function",
                 description: isFunctionDeleted
-                    ? `⚠️ Function "${functionName}" was deleted`
+                    ? `Function "${functionName}" was deleted`
                     : currentFunction
                     ? `${functionName}(${parameters.map((p) => p.name).join(", ")}) → ${typeLabel(returnType)}`
                     : "Select a function to call",
