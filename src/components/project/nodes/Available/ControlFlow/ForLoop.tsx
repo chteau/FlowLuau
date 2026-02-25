@@ -4,50 +4,46 @@ import { memo, useCallback, useState } from "react";
 import { NodeProps, useNodeId, useReactFlow, useStore } from "@xyflow/react";
 import NodeTemplate from "../../Template";
 import { ListOrdered } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { LuauType } from "@/types/luau";
-import { Label } from "@/components/ui/label";
 import VariableAutocomplete from "@/components/ui/variable-autocomplete";
 
 export interface ForLoopNodeData {
     mode?: "counting" | "generic";
+    iteratorType?: "ipairs" | "pairs" | "custom";
     variableName?: string;
     startValue?: string;
     endValue?: string;
     stepValue?: string;
     iterableExpression?: string;
-    description?: string;
     __scriptId?: string;
 }
 
 export type ForLoopNodeProps = NodeProps & { data: ForLoopNodeData };
 
 /**
- * For loop control flow node with two modes: counting (numeric range) and generic (iterator-based).
- * Counting mode exposes From/To/Step numeric inputs and outputs the current index value.
- * Generic mode accepts an iterable expression like pairs() or ipairs() and outputs iteration values.
+ * For loop control flow node supporting counting (numeric range) and generic (iterator) modes.
+ * Counting mode exposes From/To/Step inputs for `for i = start, end, step do` syntax.
+ * Generic mode supports `for _, v in ipairs/pairs/table do` with configurable iterator type.
  */
 const ForLoopNode = memo(({ data, selected }: ForLoopNodeProps) => {
     const nodeId = useNodeId();
     const { setNodes } = useReactFlow();
 
-    const [mode, setMode] = useState<"counting" | "generic">(data.mode ?? "counting");
-
+    const mode = data.mode ?? "counting";
+    const iteratorType = data.iteratorType ?? "ipairs";
     const variableName = data.variableName ?? "i";
     const startValue = data.startValue ?? "1";
     const endValue = data.endValue ?? "10";
     const stepValue = data.stepValue ?? "1";
-    const iterableExpression = data.iterableExpression ?? "pairs(table)";
+    const iterableExpression = data.iterableExpression ?? "";
 
     const updateData = useCallback(
         (partial: Partial<ForLoopNodeData>) => {
             setNodes((nodes) =>
                 nodes.map((node) =>
-                    node.id === nodeId
-                        ? { ...node, data: { ...node.data, ...partial } }
-                        : node
+                    node.id === nodeId ? { ...node, data: { ...node.data, ...partial } } : node
                 )
             );
         },
@@ -56,34 +52,50 @@ const ForLoopNode = memo(({ data, selected }: ForLoopNodeProps) => {
 
     const handleModeChange = useCallback(
         (newMode: "counting" | "generic") => {
-            setMode(newMode);
             updateData({ mode: newMode });
         },
         [updateData]
     );
 
+    const handleIteratorTypeChange = useCallback(
+        (newType: "ipairs" | "pairs" | "custom") => {
+            updateData({ iteratorType: newType });
+        },
+        [updateData]
+    );
+
     const handleVariableChange = useCallback(
-        (e: React.ChangeEvent<HTMLInputElement>) => updateData({ variableName: e.target.value }),
+        (e: React.ChangeEvent<HTMLInputElement>) => {
+            updateData({ variableName: e.target.value });
+        },
         [updateData]
     );
 
     const handleStartChange = useCallback(
-        (e: React.ChangeEvent<HTMLInputElement>) => updateData({ startValue: e.target.value }),
+        (e: React.ChangeEvent<HTMLInputElement>) => {
+            updateData({ startValue: e.target.value });
+        },
         [updateData]
     );
 
     const handleEndChange = useCallback(
-        (e: React.ChangeEvent<HTMLInputElement>) => updateData({ endValue: e.target.value }),
+        (e: React.ChangeEvent<HTMLInputElement>) => {
+            updateData({ endValue: e.target.value });
+        },
         [updateData]
     );
 
     const handleStepChange = useCallback(
-        (e: React.ChangeEvent<HTMLInputElement>) => updateData({ stepValue: e.target.value }),
+        (e: React.ChangeEvent<HTMLInputElement>) => {
+            updateData({ stepValue: e.target.value });
+        },
         [updateData]
     );
 
     const handleIterableChange = useCallback(
-        (e: React.ChangeEvent<HTMLInputElement>) => updateData({ iterableExpression: e.target.value }),
+        (e: React.ChangeEvent<HTMLInputElement>) => {
+            updateData({ iterableExpression: e.target.value });
+        },
         [updateData]
     );
 
@@ -91,6 +103,17 @@ const ForLoopNode = memo(({ data, selected }: ForLoopNodeProps) => {
     const isStartWired = connectedEdges.some((e) => e.targetHandle === "start");
     const isEndWired = connectedEdges.some((e) => e.targetHandle === "end");
     const isStepWired = connectedEdges.some((e) => e.targetHandle === "step");
+    const isIterableWired = connectedEdges.some((e) => e.targetHandle === "iterable");
+
+    const getDescription = () => {
+        if (mode === "counting") {
+            return `for ${variableName} = ${startValue}, ${endValue}${stepValue !== "1" ? `, ${stepValue}` : ""} do`;
+        }
+        if (iteratorType === "custom") {
+            return `for _, v in ${iterableExpression || "iterator"} do`;
+        }
+        return `for _, v in ${iteratorType}(table) do`;
+    };
 
     return (
         <NodeTemplate
@@ -103,18 +126,14 @@ const ForLoopNode = memo(({ data, selected }: ForLoopNodeProps) => {
                 },
                 icon: ListOrdered,
                 name: "For Loop",
-                description:
-                    data.description ??
-                    (mode === "counting"
-                        ? `Counting loop: ${variableName} from ${startValue} to ${endValue}`
-                        : `Generic loop: ${iterableExpression}`),
+                description: getDescription(),
                 selected,
             }}
             inputs={(ForLoopNode as any).getHandles(data).inputs}
             outputs={(ForLoopNode as any).getHandles(data).outputs}
         >
-            <div className="space-y-2">
-                <div className="flex gap-1 mb-2">
+            <div className="space-y-3">
+                <div className="flex gap-1">
                     <Button
                         variant={mode === "counting" ? "default" : "outline"}
                         size="xs"
@@ -134,55 +153,55 @@ const ForLoopNode = memo(({ data, selected }: ForLoopNodeProps) => {
                 </div>
 
                 {mode === "counting" && (
-                    <div className="space-y-1 mt-5">
-                        <div className="flex gap-1 flex-col mb-4">
-                            <Label htmlFor="variableName" className="text-xs text-muted-foreground">
-                                Iterator name:
-                            </Label>
+                    <div className="space-y-2">
+                        <div className="space-y-1">
+                            <label className="text-[10px] text-muted-foreground">Iterator Name</label>
                             <Input
-                                id="variableName"
                                 value={variableName}
                                 onChange={handleVariableChange}
                                 placeholder="i"
-                                className="text-xs h-7 w-full"
+                                className="text-xs h-7 font-mono"
                             />
+                        </div>
 
-                            <Label htmlFor="fromNumber" className="text-xs text-muted-foreground mt-4">
-                                From:
-                            </Label>
+                        <div className="space-y-1">
+                            <label className="text-[10px] text-muted-foreground">
+                                From {isStartWired && "(wired)"}
+                            </label>
                             <Input
-                                type={isStartWired ? "text" : "number"}
-                                id="fromNumber"
+                                type="text"
                                 value={isStartWired ? "Wired" : startValue}
                                 onChange={handleStartChange}
                                 placeholder="1"
-                                className={cn("text-xs h-7 w-full [appearance:textfield]")}
+                                className="text-xs h-7 font-mono"
                                 disabled={isStartWired}
                             />
+                        </div>
 
-                            <Label htmlFor="toNumber" className="text-xs text-muted-foreground mt-4">
-                                To:
-                            </Label>
+                        <div className="space-y-1">
+                            <label className="text-[10px] text-muted-foreground">
+                                To {isEndWired && "(wired)"}
+                            </label>
                             <Input
-                                type={isEndWired ? "text" : "number"}
-                                id="toNumber"
+                                type="text"
                                 value={isEndWired ? "Wired" : endValue}
                                 onChange={handleEndChange}
                                 placeholder="10"
-                                className={cn("text-xs h-7 w-full [appearance:textfield]")}
+                                className="text-xs h-7 font-mono"
                                 disabled={isEndWired}
                             />
+                        </div>
 
-                            <Label htmlFor="step" className="text-xs text-muted-foreground mt-4">
-                                Step:
-                            </Label>
+                        <div className="space-y-1">
+                            <label className="text-[10px] text-muted-foreground">
+                                Step {isStepWired && "(wired)"}
+                            </label>
                             <Input
-                                type={isStepWired ? "text" : "number"}
-                                id="step"
+                                type="text"
                                 value={isStepWired ? "Wired" : stepValue}
                                 onChange={handleStepChange}
                                 placeholder="1"
-                                className={cn("text-xs h-7 w-full [appearance:textfield]")}
+                                className="text-xs h-7 font-mono"
                                 disabled={isStepWired}
                             />
                         </div>
@@ -190,17 +209,67 @@ const ForLoopNode = memo(({ data, selected }: ForLoopNodeProps) => {
                 )}
 
                 {mode === "generic" && (
-                    <div className="space-y-1">
-                        <VariableAutocomplete
-                            scriptId={data.__scriptId ?? "unknown"}
-                            value={iterableExpression}
-                            onChange={handleIterableChange}
-                            placeholder="pairs(table)"
-                            className={cn("text-xs h-7 font-mono")}
-                        />
-                        <p className="text-[10px] text-muted-foreground italic">
-                            Use pairs(), ipairs(), or custom iterator
-                        </p>
+                    <div className="space-y-2">
+                        <div className="flex gap-1">
+                            <Button
+                                variant={iteratorType === "ipairs" ? "default" : "outline"}
+                                size="xs"
+                                className="text-xs h-6 cursor-pointer bg-purple-400/10 hover:bg-purple-400/20"
+                                onClick={() => handleIteratorTypeChange("ipairs")}
+                            >
+                                ipairs
+                            </Button>
+                            <Button
+                                variant={iteratorType === "pairs" ? "default" : "outline"}
+                                size="xs"
+                                className="text-xs h-6 cursor-pointer bg-purple-400/10 hover:bg-purple-400/20"
+                                onClick={() => handleIteratorTypeChange("pairs")}
+                            >
+                                pairs
+                            </Button>
+                            <Button
+                                variant={iteratorType === "custom" ? "default" : "outline"}
+                                size="xs"
+                                className="text-xs h-6 cursor-pointer bg-purple-400/10 hover:bg-purple-400/20"
+                                onClick={() => handleIteratorTypeChange("custom")}
+                            >
+                                Custom
+                            </Button>
+                        </div>
+
+                        {iteratorType === "custom" ? (
+                            <div className="space-y-1">
+                                <label className="text-[10px] text-muted-foreground">
+                                    Iterator Expression {isIterableWired && "(wired)"}
+                                </label>
+                                <VariableAutocomplete
+                                    scriptId={data.__scriptId ?? "unknown"}
+                                    value={isIterableWired ? "Wired" : iterableExpression}
+                                    onChange={handleIterableChange}
+                                    placeholder="e.g., myIterator() or table"
+                                    disabled={isIterableWired}
+                                    className="text-xs h-7 font-mono"
+                                    filterVariables={(v) => v.type === LuauType.Any || v.type === LuauType.Function}
+                                />
+                            </div>
+                        ) : (
+                            <div className="space-y-1">
+                                <label className="text-[10px] text-muted-foreground">
+                                    Table Expression
+                                </label>
+                                <VariableAutocomplete
+                                    scriptId={data.__scriptId ?? "unknown"}
+                                    value={iterableExpression}
+                                    onChange={handleIterableChange}
+                                    placeholder="e.g., numbers or myTable"
+                                    className="text-xs h-7 font-mono"
+                                    filterVariables={(v) => v.type === LuauType.Table || v.type === LuauType.Any}
+                                />
+                                <p className="text-[10px] text-muted-foreground italic">
+                                    Will generate: <code className="font-mono bg-muted px-1 rounded">for _, v in {iteratorType}({iterableExpression || "table"}) do</code>
+                                </p>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
@@ -212,6 +281,7 @@ ForLoopNode.displayName = "ForLoopNode";
 
 (ForLoopNode as any).getHandles = (data: ForLoopNodeData) => {
     const mode = data?.mode ?? "counting";
+    const iteratorType = data?.iteratorType ?? "ipairs";
 
     if (mode === "counting") {
         return {
@@ -230,10 +300,16 @@ ForLoopNode.displayName = "ForLoopNode";
     }
 
     return {
-        inputs: [{ id: "prev", label: "Prev", type: LuauType.Flow }],
+        inputs: [
+            { id: "prev", label: "Prev", type: LuauType.Flow },
+            ...(iteratorType === "custom"
+                ? [{ id: "iterable", label: "Iterator", type: LuauType.Any }]
+                : [{ id: "iterable", label: "Table", type: LuauType.Table }]),
+        ],
         outputs: [
             { id: "loop", label: "Loop Body", type: LuauType.Flow },
-            { id: "index", label: "Index", type: LuauType.Number },
+            { id: "key", label: "Key", type: LuauType.Any },
+            { id: "value", label: "Value", type: LuauType.Any },
             { id: "next", label: "Next", type: LuauType.Flow },
         ],
     };
