@@ -50,6 +50,17 @@ import MultiplyNode from "./Available/Arithmetic/Multiply";
 import DivideNode from "./Available/Arithmetic/Divide";
 import ModulusNode from "./Available/Arithmetic/Modulus";
 
+import AndNode from "./Available/Logical/And";
+import OrNode from "./Available/Logical/Or";
+import NotNode from "./Available/Logical/Not";
+
+import EqualNode from "./Available/Comparison/Equal";
+import NotEqualNode from "./Available/Comparison/NotEqual";
+import GreaterThanNode from "./Available/Comparison/GreaterThan";
+import GreaterThanOrEqualNode from "./Available/Comparison/GreaterThanOrEqual";
+import LessThanNode from "./Available/Comparison/LessThan";
+import LessThanOrEqualNode from "./Available/Comparison/LessThanOrEqual";
+
 import PrintNode from "./Available/SideEffects/Print";
 
 import TableConcatNode from "./Available/Table/Concat";
@@ -107,6 +118,19 @@ export const nodeTypes = {
     Multiply: MultiplyNode,
     Divide: DivideNode,
     Modulus: ModulusNode,
+
+    // Logical Operators Nodes
+    And: AndNode,
+    Or: OrNode,
+    Not: NotNode,
+
+    // Comparison Operators Nodes
+    Equal: EqualNode,
+    NotEqual: NotEqualNode,
+    GreaterThan: GreaterThanNode,
+    GreaterThanOrEqual: GreaterThanOrEqualNode,
+    LessThan: LessThanNode,
+    LessThanOrEqual: LessThanOrEqualNode,
 
     // Side Effects Nodes
     Print: PrintNode,
