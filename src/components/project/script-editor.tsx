@@ -622,13 +622,21 @@ function EditorCanvas({ selectedScript }: ScriptEditorProps) {
 
             if (graph && graph.nodes.length > 0) {
                 // @ts-ignore
-                initialNodes = graph.nodes as FlowNode[];
+                initialNodes = graph.nodes.map(node => ({
+                    ...node,
+                    data: {
+                        ...node.data,
+                        __scriptId: selectedScript.id
+                    }
+                })) as FlowNode[];
             } else {
                 initialNodes = [
                     {
                         id: "1",
                         type: "Start",
-                        data: {},
+                        data: {
+                            __scriptId: selectedScript.id
+                        },
                         position: { x: 300, y: 50 },
                         deletable: false,
                         selectable: false,

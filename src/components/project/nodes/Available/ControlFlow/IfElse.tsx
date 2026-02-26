@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback } from "react";
+import { memo, useCallback, useEffect } from "react";
 import { NodeProps, useNodeId, useReactFlow, useStore } from "@xyflow/react";
 import NodeTemplate from "../../Template";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,8 @@ import { Plus, Minus, ChevronDown, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LuauType } from "@/types/luau";
 import VariableAutocomplete from "@/components/ui/variable-autocomplete";
+import { useIntellisenseStore } from "@/stores/intellisense-store";
+import { useScopeManagement } from "@/hooks/use-scope-management";
 
 /** Represents a single conditional branch within an if/else structure. */
 interface ConditionBranch {
@@ -43,6 +45,27 @@ const validateExpression = (expr: string): boolean => {
 const IfElseNode = memo(({ data, selected }: IfElseNodeProps) => {
     const nodeId = useNodeId();
     const { setNodes } = useReactFlow();
+    const scriptId = data.__scriptId;
+
+    // Create and manage block scope for if/else branches
+    useEffect(() => {
+        if (!scriptId) return;
+
+        // Create block scope for the if/else structure
+        const blockScopeId = `${nodeId}-block-scope`;
+        useIntellisenseStore.getState().createScope(scriptId, {
+            id: blockScopeId,
+            scopeType: "block",
+            nodeId: nodeId!,
+            variableNames: new Set(),
+            childScopeIds: new Set(),
+        });
+
+        return () => {
+            // Clean up when node is removed
+            useIntellisenseStore.getState().destroyScope(scriptId, blockScopeId);
+        };
+    }, [scriptId, nodeId]);
 
     const mainCondition: ConditionBranch = data.mainCondition ?? {
         id: "main",

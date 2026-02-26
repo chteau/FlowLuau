@@ -44,7 +44,10 @@ const VariableSetNode = memo(({ data, selected }: VariableSetNodeProps) => {
     );
 
     const handleBlur = useCallback(() => {
-        if (!scriptId) return;
+        if (!scriptId) {
+            console.warn(`VariableSet: scriptId is undefined for node ${nodeId}`);
+            return;
+        }
 
         let newName = (data.variableName ?? "").trim();
         if (!newName) {
@@ -55,26 +58,54 @@ const VariableSetNode = memo(({ data, selected }: VariableSetNodeProps) => {
         const oldName = previousNameRef.current?.trim();
         if (newName === oldName) return;
 
-        if (oldName) useIntellisenseStore.getState().removeVariable(scriptId, oldName);
-        useIntellisenseStore.getState().addVariable(scriptId, { name: newName, type: inferredType });
+        // Get current scope for this variable
+        const currentScopeId = useIntellisenseStore.getState().getCurrentScopeId(scriptId);
+        const scopeType = currentScopeId ? "block" : "global";
+
+        console.log(`VariableSet: Adding variable "${newName}" with type ${inferredType} to script "${scriptId}" in scope "${currentScopeId || 'global'}"`);
+        if (oldName) {
+            console.log(`VariableSet: Removing old variable "${oldName}" from script "${scriptId}"`);
+            useIntellisenseStore.getState().removeVariable(scriptId, oldName);
+        }
+        useIntellisenseStore.getState().addVariable(scriptId, {
+            name: newName,
+            type: inferredType,
+            ...(currentScopeId && { scopeId: currentScopeId }),
+            scopeType: scopeType
+        });
         previousNameRef.current = newName;
     }, [scriptId, data.variableName, inferredType, updateVariableName]);
 
     // Keep the variable registry in sync whenever name or inferred type changes.
     useEffect(() => {
         const trimmed = variableName.trim();
-        if (!scriptId || !trimmed) return;
+        if (!scriptId) {
+            console.warn(`VariableSet useEffect: scriptId is undefined for node ${nodeId}`);
+            return;
+        }
+        if (!trimmed) return;
 
         const shouldUpdate =
             trimmed !== previousNameRef.current || inferredType !== LuauType.Any;
 
         if (shouldUpdate) {
-            useIntellisenseStore.getState().addVariable(scriptId, { name: trimmed, type: inferredType });
+            // Get current scope for this variable
+            const currentScopeId = useIntellisenseStore.getState().getCurrentScopeId(scriptId);
+            const scopeType = currentScopeId ? "block" : "global";
+
+            console.log(`VariableSet useEffect: Updating variable "${trimmed}" with type ${inferredType} in script "${scriptId}" scope "${currentScopeId || 'global'}"`);
+            useIntellisenseStore.getState().addVariable(scriptId, {
+                name: trimmed,
+                type: inferredType,
+                ...(currentScopeId && { scopeId: currentScopeId }),
+                scopeType: scopeType
+            });
             previousNameRef.current = trimmed;
         }
 
         return () => {
             if (scriptId && previousNameRef.current) {
+                console.log(`VariableSet cleanup: Removing variable "${previousNameRef.current}" from script "${scriptId}"`);
                 useIntellisenseStore.getState().removeVariable(scriptId, previousNameRef.current);
             }
         };

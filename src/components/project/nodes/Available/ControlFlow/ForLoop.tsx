@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback, useState } from "react";
+import { memo, useCallback, useState, useEffect } from "react";
 import { NodeProps, useNodeId, useReactFlow, useStore } from "@xyflow/react";
 import NodeTemplate from "../../Template";
 import { ListOrdered } from "lucide-react";
@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { LuauType } from "@/types/luau";
 import VariableAutocomplete from "@/components/ui/variable-autocomplete";
+import { useIntellisenseStore } from "@/stores/intellisense-store";
+import { useScopeManagement } from "@/hooks/use-scope-management";
 
 export interface ForLoopNodeData {
     mode?: "counting" | "generic";
@@ -30,6 +32,7 @@ export type ForLoopNodeProps = NodeProps & { data: ForLoopNodeData };
 const ForLoopNode = memo(({ data, selected }: ForLoopNodeProps) => {
     const nodeId = useNodeId();
     const { setNodes } = useReactFlow();
+    const scriptId = data.__scriptId;
 
     const mode = data.mode ?? "counting";
     const iteratorType = data.iteratorType ?? "ipairs";
@@ -38,6 +41,19 @@ const ForLoopNode = memo(({ data, selected }: ForLoopNodeProps) => {
     const endValue = data.endValue ?? "10";
     const stepValue = data.stepValue ?? "1";
     const iterableExpression = data.iterableExpression ?? "";
+
+    // Use scope management hook for loop scope
+    const { scopeId: loopScopeId } = useScopeManagement(
+        scriptId,
+        nodeId!,
+        "loop",
+        undefined, // No parent scope for top-level loops
+        [{
+            name: variableName,
+            type: LuauType.Number, // Loop variables are typically numbers
+            isConstant: false,
+        }]
+    );
 
     const updateData = useCallback(
         (partial: Partial<ForLoopNodeData>) => {

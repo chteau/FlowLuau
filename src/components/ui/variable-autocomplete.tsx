@@ -181,8 +181,43 @@ const VariableAutocomplete = forwardRef<
          * @returns {Variable[]} Array of variable definitions for current script scope
          * @dependency {string} scriptId - Current script identifier for registry lookup
          */
+        // Debug: Log scriptId and available scripts
+        useEffect(() => {
+            console.log(`VariableAutocomplete: scriptId="${scriptId}"`);
+            const storeState = useIntellisenseStore.getState();
+            console.log(`Available script IDs: ${Array.from(storeState.scriptVariables.keys()).join(', ') || 'none'}`);
+            
+            // Get current scope and variables
+            if (scriptId && scriptId !== "unknown") {
+                const currentScopeId = storeState.getCurrentScopeId(scriptId);
+                console.log(`Current scope for script "${scriptId}": ${currentScopeId || 'global'}`);
+                
+                if (currentScopeId) {
+                    const vars = storeState.getVisibleVariablesForScope(scriptId, currentScopeId);
+                    console.log(`Scoped variables for "${scriptId}" in scope "${currentScopeId}":`, vars);
+                } else {
+                    const vars = storeState.getVariablesForScript(scriptId);
+                    console.log(`Global variables for script "${scriptId}":`, vars);
+                }
+            }
+        }, [scriptId]);
+
         const variables = useIntellisenseStore(
-            useShallow((s) => s.getVariablesForScript(scriptId))
+            useShallow((s) => {
+                // If scriptId is not available, return empty array
+                if (!scriptId || scriptId === "unknown") {
+                    return [];
+                }
+                
+                // Get variables visible in the current scope
+                const currentScopeId = s.getCurrentScopeId(scriptId);
+                if (currentScopeId) {
+                    return s.getVisibleVariablesForScope(scriptId, currentScopeId);
+                }
+                
+                // Fallback to all script variables if no scope is active
+                return s.getVariablesForScript(scriptId);
+            })
         );
 
         /**

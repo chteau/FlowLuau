@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback } from "react";
+import { memo, useCallback, useEffect } from "react";
 import { NodeProps, useNodeId, useReactFlow, useStore } from "@xyflow/react";
 import NodeTemplate from "../../Template";
 import { Clock } from "lucide-react";
@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { LuauType } from "@/types/luau";
 import VariableAutocomplete from "@/components/ui/variable-autocomplete";
+import { useIntellisenseStore } from "@/stores/intellisense-store";
 
 export interface WhileLoopNodeData {
     mode?: "linear" | "expression";
@@ -29,6 +30,27 @@ export type WhileLoopNodeProps = NodeProps & { data: WhileLoopNodeData };
 const WhileLoopNode = memo(({ data, selected }: WhileLoopNodeProps) => {
     const nodeId = useNodeId();
     const { setNodes } = useReactFlow();
+    const scriptId = data.__scriptId;
+
+    // Create and manage loop scope for while loop
+    useEffect(() => {
+        if (!scriptId) return;
+        
+        // Create loop scope for the while loop
+        const loopScopeId = `${nodeId}-loop-scope`;
+        useIntellisenseStore.getState().createScope(scriptId, {
+            id: loopScopeId,
+            scopeType: "loop",
+            nodeId: nodeId,
+            variableNames: new Set(),
+            childScopeIds: new Set(),
+        });
+        
+        return () => {
+            // Clean up when node is removed
+            useIntellisenseStore.getState().destroyScope(scriptId, loopScopeId);
+        };
+    }, [scriptId, nodeId]);
 
     const mode = data.mode ?? "linear";
     const expression = data.expression ?? "";

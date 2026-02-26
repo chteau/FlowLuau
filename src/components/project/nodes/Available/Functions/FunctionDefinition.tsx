@@ -16,6 +16,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { useIntellisenseStore } from "@/stores/intellisense-store";
+import { useScopeManagement } from "@/hooks/use-scope-management";
 
 /** Represents a single parameter in a function signature with name and Luau type. */
 export interface FunctionParameter {
@@ -57,14 +58,29 @@ const FunctionDefinitionNode = memo(({ data, selected }: FunctionDefinitionNodeP
         [nodeId, setNodes]
     );
 
+    // Use scope management hook for function scope
+    const { scopeId: functionScopeId } = useScopeManagement(
+        scriptId,
+        nodeId!,
+        "function",
+        undefined, // No parent scope for top-level functions
+        parameters.map(param => ({
+            name: param.name,
+            type: param.type,
+            isConstant: true,
+        }))
+    );
+
     useEffect(() => {
         if (!scriptId || !functionName.trim()) return;
+        
         useIntellisenseStore.getState().addFunction(scriptId, {
             name: functionName.trim(),
             parameters,
             returnType,
             nodeId: nodeId!,
         });
+        
         return () => {
             if (scriptId && functionName.trim()) {
                 useIntellisenseStore.getState().removeFunction(scriptId, functionName.trim());

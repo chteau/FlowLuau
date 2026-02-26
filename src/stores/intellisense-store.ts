@@ -11,6 +11,20 @@ export interface Variable {
     initialValue?: string;
     description?: string;
     isConstant?: boolean;
+    scopeId?: string; // Unique identifier for the scope this variable belongs to
+    scopeType?: "global" | "function" | "block" | "loop"; // Type of scope
+}
+
+/**
+ * Represents a scope hierarchy for variable visibility
+ */
+export interface VariableScope {
+    id: string; // Unique scope identifier
+    parentScopeId?: string; // Parent scope for nested scopes
+    scopeType: "global" | "function" | "block" | "loop";
+    nodeId?: string; // React Flow node ID that defines this scope
+    variableNames: Set<string>; // Variables defined in this scope
+    childScopeIds: Set<string>; // Nested scopes within this scope
 }
 
 /**
@@ -72,6 +86,14 @@ interface IntellisenseStore {
     getVariablesForScript: (scriptId: string) => Variable[];
     clearScriptVariables: (scriptId: string) => void;
 
+    // Scope management
+    createScope: (scriptId: string, scope: VariableScope) => void;
+    destroyScope: (scriptId: string, scopeId: string) => void;
+    enterScope: (scriptId: string, scopeId: string) => void;
+    exitScope: (scriptId: string, scopeId: string) => void;
+    getCurrentScopeId: (scriptId: string) => string | undefined;
+    getVariablesInScope: (scriptId: string, scopeId: string) => Variable[];
+    getVisibleVariablesForScope: (scriptId: string, scopeId: string) => Variable[];
 
     addFunction: (scriptId: string, func: FunctionDefinition) => void;
     updateFunction: (scriptId: string, name: string, updates: Partial<FunctionDefinition>) => void;
@@ -86,6 +108,8 @@ interface IntellisenseStore {
 export const useIntellisenseStore = create<IntellisenseStore>((set, get) => ({
     scriptVariables: new Map(),
     scriptFunctions: new Map(),
+    scriptScopes: new Map(),
+    activeScopes: new Map(),
 
     addVariable: (scriptId, variable) => {
         set((state) => {
@@ -155,6 +179,120 @@ export const useIntellisenseStore = create<IntellisenseStore>((set, get) => ({
             newState.delete(scriptId);
             return { scriptVariables: newState };
         });
+    },
+
+    // Scope management implementations
+    createScope: (scriptId, scope) => {
+        set((state) => {
+            const scriptScopes = state.scriptScopes.get(scriptId) || new Map();
+            scriptScopes.set(scope.id, scope);
+
+            const newScopesState = new Map(state.scriptScopes);
+            newScopesState.set(scriptId, scriptScopes);
+
+            return { scriptScopes: newScopesState };
+        });
+    },
+
+    destroyScope: (scriptId, scopeId) => {
+        set((state) => {
+            const scriptScopes = state.scriptScopes.get(scriptId);
+            if (!scriptScopes) return state;
+
+            const newScriptScopes = new Map(scriptScopes);
+            newScriptScopes.delete(scopeId);
+
+            const newScopesState = new Map(state.scriptScopes);
+            newScopesState.set(scriptId, newScriptScopes);
+
+            // Also clean up from active scopes if present
+            const activeScopeSet = state.activeScopes.get(scriptId);
+            if (activeScopeSet?.has(scopeId)) {
+                const newActiveSet = new Set(activeScopeSet);
+                newActiveSet.delete(scopeId);
+                const newActiveState = new Map(state.activeScopes);
+                newActiveState.set(scriptId, newActiveSet);
+                return { scriptScopes: newScopesState, activeScopes: newActiveState };
+            }
+
+            return { scriptScopes: newScopesState };
+        });
+    },
+
+    enterScope: (scriptId, scopeId) => {
+        set((state) => {
+            const activeScopeSet = state.activeScopes.get(scriptId) || new Set();
+            activeScopeSet.add(scopeId);
+
+            const newActiveState = new Map(state.activeScopes);
+            newActiveState.set(scriptId, activeScopeSet);
+
+            return { activeScopes: newActiveState };
+        });
+    },
+
+    exitScope: (scriptId, scopeId) => {
+        set((state) => {
+            const activeScopeSet = state.activeScopes.get(scriptId);
+            if (!activeScopeSet) return state;
+
+            const newActiveSet = new Set(activeScopeSet);
+            newActiveSet.delete(scopeId);
+
+            const newActiveState = new Map(state.activeScopes);
+            newActiveState.set(scriptId, newActiveSet);
+
+            return { activeScopes: newActiveState };
+        });
+    },
+
+    getCurrentScopeId: (scriptId) => {
+        const activeScopes = get().activeScopes.get(scriptId);
+        if (!activeScopes || activeScopes.size === 0) return undefined;
+        
+        // Return the most recently entered scope (last one in the set)
+        return Array.from(activeScopes).pop();
+    },
+
+    getVariablesInScope: (scriptId, scopeId) => {
+        const variables = get().scriptVariables.get(scriptId);
+        if (!variables) return [];
+        
+        return Array.from(variables.values()).filter(v => v.scopeId === scopeId);
+    },
+
+    getVisibleVariablesForScope: (scriptId, scopeId) => {
+        const allVariables = get().scriptVariables.get(scriptId);
+        if (!allVariables) return [];
+        
+        const scopes = get().scriptScopes.get(scriptId);
+        if (!scopes) return Array.from(allVariables.values());
+        
+        const currentScope = scopes.get(scopeId);
+        if (!currentScope) return Array.from(allVariables.values());
+        
+        // Collect all visible variables by walking up the scope chain
+        const visibleVariables = new Set<Variable>();
+        let current: VariableScope | undefined = currentScope;
+        
+        while (current) {
+            // Add variables from this scope
+            const scopeVars = Array.from(allVariables.values()).filter(v => v.scopeId === current.id);
+            scopeVars.forEach(v => visibleVariables.add(v));
+            
+            // Move to parent scope
+            if (current.parentScopeId) {
+                current = scopes.get(current.parentScopeId);
+            } else {
+                current = undefined;
+            }
+        }
+        
+        // Add global variables (variables with no scopeId or scopeType === "global")
+        const globalVars = Array.from(allVariables.values()).filter(v => !v.scopeId || v.scopeType === "global");
+        globalVars.forEach(v => visibleVariables.add(v));
+        
+        return Array.from(visibleVariables);
     },
 
     addFunction: (scriptId, func) => {
